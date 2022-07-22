@@ -3,7 +3,7 @@ import os
 import cv2
 from torch.utils.data import Dataset
 
-from utils import preprocess_image, preprocess_mask2onehot, preprocess_single_mask, get_img_names
+from .utils import preprocess_image, preprocess_mask2onehot, preprocess_single_mask, get_img_names
 
 
 class TrainDataset(Dataset):

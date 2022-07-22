@@ -3,8 +3,8 @@ from argparse import ArgumentParser
 from omegaconf import OmegaConf
 from pytorch_lightning import Trainer, seed_everything
 
-from model import LightningModel
-from datamodules import DataModule
+from segmentation_baseline.model import LightningModel
+from segmentation_baseline.datamodules import DataModule
 
 def parse_args():
     parser = ArgumentParser()

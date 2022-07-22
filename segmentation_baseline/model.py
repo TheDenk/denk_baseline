@@ -1,7 +1,7 @@
 
 import pytorch_lightning as pl
 
-from utils import instantiate_from_config, get_obj_from_str
+from .utils import instantiate_from_config, get_obj_from_str
 
 
 class LightningModel(pl.LightningModule):

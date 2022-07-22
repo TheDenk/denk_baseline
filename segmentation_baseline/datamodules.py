@@ -1,8 +1,8 @@
 import pytorch_lightning as pl
 from torch.utils.data import DataLoader
 
-from augs import get_train_augs, get_valid_augs
-from utils import instantiate_from_config
+from .augs import get_train_augs, get_valid_augs
+from .utils import instantiate_from_config
 
 class DataModule(pl.LightningDataModule):
     def __init__(self, config):
