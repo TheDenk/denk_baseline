@@ -17,8 +17,13 @@ model:
     
 criterions:
 - target: torch.nn.BCEWithLogitsLoss
-  weight: 1.0
+  weight: 0.5
   name: bce
+- target: segmentation_models_pytorch.losses.DiceLoss
+  params:
+    mode: binary
+  weight: 0.5
+  name: dice
 
 optimizers:
 - target: torch.optim.Adam
@@ -38,13 +43,16 @@ metrics:
   params:
     threshold: 0.5
   name: iou
-  use_bg: False
+- target: segmentation_baseline.metrics.DiceCoef
+  params:
+    threshold: 0.5
+  name: dice
 
 callbacks:
 - target: pytorch_lightning.callbacks.LearningRateMonitor
 - target: pytorch_lightning.callbacks.ModelCheckpoint
   params:
-    filename: best-{epoch:02d}-{iou_valid:2.2f}
+    filename: best-{epoch:02d}-{iou_valid:2.2f}-{dice_valid:2.2f}
     monitor: iou_valid
     mode: max
     save_top_k: 1
