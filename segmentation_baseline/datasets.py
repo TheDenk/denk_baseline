@@ -1,6 +1,7 @@
 import os
 
 import cv2
+import numpy as np
 import pandas as pd
 from torch.utils.data import Dataset
 
@@ -70,7 +71,10 @@ class HubmapDataset(Dataset):
             image = item['image']
             mask = item['mask']
 
-        image = preprocess_image(image, img_w=self.img_w, img_h=self.img_h)
+        mean = np.array([0.7720342, 0.74582646, 0.76392896])
+        std = np.array([0.24745085, 0.26182273, 0.25782376])
+
+        image = preprocess_image(image, img_w=self.img_w, img_h=self.img_h, mean=mean, std=std)
         mask = preprocess_single_mask(mask, self.labels, img_w=self.img_w, img_h=self.img_h)
 
         return {

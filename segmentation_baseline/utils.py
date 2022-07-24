@@ -19,7 +19,7 @@ def preprocess_image(image, img_w=None, img_h=None, mean=np.array([0, 0, 0]), st
     if img_w and img_h:
         img = cv2.resize(img, (img_w, img_h))
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-    img = img.astype(np.float32) / 255.0
+    img = ((img.astype(np.float32) / 255.0 - mean) / std).astype(np.float32)
     img = torch.from_numpy(img).permute(2, 0, 1)
     return img
 
