@@ -7,7 +7,7 @@ common:
   batch_size: 8
   num_workers: 8
   epochs: 128
-  wandb: False
+  wandb: false
 
 model:
   target: segmentation_models_pytorch.Unet
@@ -16,14 +16,29 @@ model:
     classes: 1
     
 criterions:
-- target: torch.nn.BCEWithLogitsLoss
-  weight: 0.5
-  name: bce
-- target: segmentation_models_pytorch.losses.DiceLoss
+# - target: segmentation_models_pytorch.losses.SoftBCEWithLogitsLoss
+#   weight: 1.0
+#   name: bce
+# - target: segmentation_models_pytorch.losses.DiceLoss
+#   params:
+#     mode: binary
+#   weight: 1.0
+#   name: dice
+- target: segmentation_models_pytorch.losses.JaccardLoss
   params:
     mode: binary
-  weight: 0.5
-  name: dice
+  weight: 0.2
+  name: jaccard
+# - target: segmentation_models_pytorch.losses.LovaszLoss
+#   params:
+#     mode: binary
+#   weight: 0.2
+#   name: lovas
+# - target: segmentation_models_pytorch.losses.TverskyLoss
+#   params:
+#     mode: binary
+#   weight: 0.2
+#   name: tversky
 
 optimizers:
 - target: torch.optim.Adam
@@ -36,8 +51,17 @@ optimizers:
       max_epochs: 128
       warmup_start_lr: 0.001
     additional:
-      monitor: iou_valid
-
+      monitor: dice_valid
+    # target: torch.optim.lr_scheduler.ReduceLROnPlateau
+    # params:
+    #   mode: max
+    #   factor: 0.8
+    #   patience: 10
+    #   min_lr: 0.00000001
+    #   verbose: false
+    # additional:
+    #   monitor: dice_valid
+    
 metrics:
 - target: segmentation_models_pytorch.utils.metrics.IoU
   params:
@@ -53,10 +77,11 @@ callbacks:
 - target: pytorch_lightning.callbacks.ModelCheckpoint
   params:
     filename: best-{epoch:02d}-{iou_valid:2.2f}-{dice_valid:2.2f}
-    monitor: iou_valid
+    monitor: dice_valid
     mode: max
     save_top_k: 1
     save_last: true
+    save_weights_only: true
 
 datasets:
   train:

@@ -68,8 +68,8 @@ datasets:
       - 6
       - 7
       - 10
-      images_dir: /home/user/datasets/denu/images
-      masks_dir: /home/user/datasets/denu/mask
+      images_dir: /home/user/datasets/test_dataset/images
+      masks_dir: /home/user/datasets/test_dataset/mask
   valid:
     target: segmentation_baseline.datasets.NiiasDataset
     params:
@@ -80,5 +80,5 @@ datasets:
       - 6
       - 7
       - 10
-      images_dir: /home/user/datasets/denu/images
-      masks_dir: /home/user/datasets/denu/mask
+      images_dir: /home/user/datasets/test_dataset/images
+      masks_dir: /home/user/datasets/test_dataset/mask

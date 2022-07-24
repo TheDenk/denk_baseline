@@ -9,3 +9,9 @@ python main.py --config ./configs/hubmap_config.yaml
 ```python
 python main.py --config ./configs/niias_config.yaml
 ```
+
+##### Watch tensorboard
+
+```pyhton
+tensorboard --logdir=lightning_logs/
+```
