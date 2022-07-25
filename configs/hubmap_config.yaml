@@ -3,11 +3,9 @@ common:
   - 0
   task: 'binary'
   seed: 17
-  folds_count: null
   batch_size: 32
   num_workers: 8
-  epochs: 512
-  wandb: false
+  epochs: 128
 
 model:
   target: segmentation_models_pytorch.Unet
@@ -16,9 +14,6 @@ model:
     classes: 1
     
 criterions:
-# - target: segmentation_models_pytorch.losses.SoftBCEWithLogitsLoss
-#   weight: 0.25
-#   name: bce
 - target: segmentation_models_pytorch.losses.DiceLoss
   params:
     mode: binary
@@ -43,7 +38,7 @@ optimizers:
     target: pl_bolts.optimizers.lr_scheduler.LinearWarmupCosineAnnealingLR
     params:
       warmup_epochs: 32
-      max_epochs: 512
+      max_epochs: 128
       warmup_start_lr: 0.001
     additional:
       monitor: dice_valid
@@ -87,9 +82,10 @@ datasets:
       labels:
       - 0
       - 1
-      images_dir: /home/user/datasets/hubmap-organ-segmentation/train_images
-      masks_dir: /home/user/datasets/hubmap-organ-segmentation/train_masks
-      csv_path: /home/user/datasets/hubmap-organ-segmentation/train_split.csv
+      augs: segmentation_baseline.augs.HubmapTrainAugs
+      images_dir: path_to_images
+      masks_dir: path_to_masks
+      csv_path: path_to_csv
   valid:
     target: segmentation_baseline.datasets.HubmapDataset
     params:
@@ -98,9 +94,9 @@ datasets:
       labels:
       - 0
       - 1
-      images_dir: /home/user/datasets/hubmap-organ-segmentation/train_images
-      masks_dir: /home/user/datasets/hubmap-organ-segmentation/train_masks
-      csv_path: /home/user/datasets/hubmap-organ-segmentation/valid_split.csv
+      images_dir: path_to_images
+      masks_dir: path_to_masks
+      csv_path: path_to_csv
 
 # loggers:
 # - target: pytorch_lightning.loggers.TensorBoardLogger

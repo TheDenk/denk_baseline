@@ -1,0 +1,57 @@
+common:
+  gpus:
+  - 0
+  task: 'binary'
+  seed: 17
+  batch_size: 32
+  num_workers: 8
+  epochs: 128
+
+model:
+  target: segmentation_models_pytorch.Unet
+  params:
+    encoder_name: resnet18
+    classes: 1
+    
+criterions:
+- target: torch.nn.BCEWithLogitsLoss
+  weight: 1.0
+  name: bce
+
+optimizers:
+- target: torch.optim.Adam
+  params:
+    lr: 0.001
+    
+metrics:
+- target: segmentation_models_pytorch.utils.metrics.IoU
+  params:
+    threshold: 0.5
+  name: iou
+
+callbacks:
+- target: pytorch_lightning.callbacks.LearningRateMonitor
+- target: pytorch_lightning.callbacks.ModelCheckpoint
+  params:
+    filename: best-{epoch:02d}-{iou_valid:2.2f}
+    monitor: iou_valid
+    mode: max
+    save_top_k: 1
+    save_last: true
+    save_weights_only: true
+
+datasets:
+  train:
+    target: segmentation_baseline.datasets.BinaryDataset
+    params:
+      img_h: 256
+      img_w: 256
+      images_dir: path_to_images
+      masks_dir: path_to_masks
+  valid:
+    target: segmentation_baseline.datasets.BinaryDataset
+    params:
+      img_h: 256
+      img_w: 256
+      images_dir: path_to_images
+      masks_dir: path_to_masks

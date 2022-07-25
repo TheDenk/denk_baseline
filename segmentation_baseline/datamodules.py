@@ -1,8 +1,7 @@
 import pytorch_lightning as pl
 from torch.utils.data import DataLoader
 
-from .augs import get_train_augs, get_valid_augs
-from .utils import instantiate_from_config
+from .utils import instantiate_from_config, get_obj_from_str
 
 
 class DataModule(pl.LightningDataModule):
@@ -11,10 +10,10 @@ class DataModule(pl.LightningDataModule):
         self.config = config
 
         self.train = instantiate_from_config(config['datasets']['train'])
-        self.train.augs = get_train_augs()
+        if self.train.augs: self.train.augs = get_obj_from_str(self.train.augs)()
 
         self.valid = instantiate_from_config(config['datasets']['valid'])
-        self.valid.augs = get_valid_augs()
+        if self.valid.augs: self.valid.augs = get_obj_from_str(self.valid.augs)()
 
     def train_dataloader(self):
         return DataLoader(self.train, 
