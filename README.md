@@ -1,10 +1,10 @@
 ## SEGMENTATION BASELINE
   
-Base scripts to quickly train neural network for binary or multiclass semantic segmentation task.  
+Common scripts for fast neural network training for the task of binary and multiclass semantic segmentation. 
 
-This repo unions scripts of <a href="https://github.com/Lightning-AI/lightning">PytorchLightning</a> and <a href="https://github.com/qubvel/segmentation_models.pytorch">Segmentation Models Pytorch</a> to train models.  
+This repo combines approaches of <a href="https://github.com/Lightning-AI/lightning">PytorchLightning</a> and <a href="https://github.com/qubvel/segmentation_models.pytorch">Segmentation Models Pytorch</a> for models training.  
 
-By default trained models and logs are saving in ./lightning_logs/experiment_x folder.  
+Initially trained models and logs are saved in ```./lightning_logs/experiment_% folder. ``` 
 
 ### Basic usage
 
@@ -21,7 +21,7 @@ pip install -r requirements.txt
 
 #### 3. Set path to images and masks
 
-In config files (in configs folder) you should set path to images and masks folders.   
+In config file (in configs folder) you should set path to images and masks folders.   
 Also you can change come parameters of training.
 
 #### 4. Run training
