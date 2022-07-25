@@ -2,7 +2,9 @@
   
 Base scripts to quickly train neural network for binary or multiclass semantic segmentation task.  
 
-This repo unions scripts of <a href="">PytorchLightning</a> and <a href="">Segmentation Models Pytorch</a> to train models.  
+This repo unions scripts of <a href="https://github.com/Lightning-AI/lightning">PytorchLightning</a> and <a href="https://github.com/qubvel/segmentation_models.pytorch">Segmentation Models Pytorch</a> to train models.  
+
+By default trained models and logs are saving in ./lightning_logs/experiment_x folder.  
 
 ### Basic usage
 
@@ -39,3 +41,6 @@ python main.py --config ./configs/example_multiclass_config.yaml
 ```pyhton
 tensorboard --logdir=lightning_logs/
 ```
+
+## Contacts
+<p>Issues should be raised directly in the repository. For professional support and recommendations please <a>welcomedenk@gmail.com</a>.</p>
