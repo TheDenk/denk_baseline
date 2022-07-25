@@ -3,11 +3,9 @@ common:
   - 0
   task: 'binary'
   seed: 17
-  folds_count: null
   batch_size: 32
   num_workers: 8
-  epochs: 2048
-  wandb: false
+  epochs: 128
 
 model:
   target: segmentation_models_pytorch.Unet
@@ -39,8 +37,8 @@ optimizers:
   scheduler:
     target: pl_bolts.optimizers.lr_scheduler.LinearWarmupCosineAnnealingLR
     params:
-      warmup_epochs: 128
-      max_epochs: 2048
+      warmup_epochs: 32
+      max_epochs: 128
       warmup_start_lr: 0.001
     additional:
       monitor: dice_valid
@@ -81,9 +79,6 @@ datasets:
     params:
       img_h: 256
       img_w: 256
-      labels:
-      - 0
-      - 1
       images_dir: /home/user/datasets/hubmap-organ-segmentation/train_images
       masks_dir: /home/user/datasets/hubmap-organ-segmentation/train_masks
       csv_path: /home/user/datasets/hubmap-organ-segmentation/train_split.csv
@@ -92,12 +87,10 @@ datasets:
     params:
       img_h: 256
       img_w: 256
-      labels:
-      - 0
-      - 1
       images_dir: /home/user/datasets/hubmap-organ-segmentation/train_images
       masks_dir: /home/user/datasets/hubmap-organ-segmentation/train_masks
       csv_path: /home/user/datasets/hubmap-organ-segmentation/valid_split.csv
+
 
 # loggers:
 # - target: pytorch_lightning.loggers.TensorBoardLogger

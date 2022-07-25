@@ -44,13 +44,14 @@ class BaseModel(pl.LightningModule):
                 **item.get('params', {}))
             optimizers.append(optimizer)
             
-            scheduler = get_obj_from_str(item['scheduler']['target'])(
-                optimizer = optimizer, 
-                **item['scheduler'].get('params', {}))
-            schedulers.append({
-                'scheduler':scheduler,
-                **item['scheduler']['additional'],
-            })
+            if item.get('scheduler', None):
+                scheduler = get_obj_from_str(item['scheduler']['target'])(
+                    optimizer = optimizer, 
+                    **item['scheduler'].get('params', {}))
+                schedulers.append({
+                    'scheduler':scheduler,
+                    **item['scheduler']['additional'],
+                })
         
         return optimizers, schedulers
     

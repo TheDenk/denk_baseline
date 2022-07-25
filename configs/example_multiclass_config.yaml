@@ -10,33 +10,18 @@ common:
 model:
   target: segmentation_models_pytorch.Unet
   params:
-    encoder_name: resnet34
+    encoder_name: resnet18
     classes: 4
     
 criterions:
-- target: segmentation_models_pytorch.losses.FocalLoss
-  params:
-    mode: multiclass
-  weight: 0.5
-  name: focal
-- target: segmentation_models_pytorch.losses.JaccardLoss
-  params:
-    mode: multiclass
-  weight: 0.5
-  name: jaccard
+- target: torch.nn.CrossEntropyLoss
+  weight: 1.0
+  name: cross_entropy
 
 optimizers:
 - target: torch.optim.Adam
   params:
-    lr: 0.003
-  scheduler:
-    target: pl_bolts.optimizers.lr_scheduler.LinearWarmupCosineAnnealingLR
-    params:
-      warmup_epochs: 16
-      max_epochs: 32
-      warmup_start_lr: 0.001
-    additional:
-      monitor: iou_valid
+    lr: 0.001
 
 metrics:
 - target: segmentation_models_pytorch.utils.metrics.IoU
@@ -44,6 +29,7 @@ metrics:
     threshold: 0.5
   name: iou
   use_bg: False
+
 callbacks:
 - target: pytorch_lightning.callbacks.LearningRateMonitor
 - target: pytorch_lightning.callbacks.ModelCheckpoint
@@ -56,23 +42,22 @@ callbacks:
 
 datasets:
   train:
-    target: segmentation_baseline.datasets.NiiasDataset
+    target: segmentation_baseline.datasets.MulticlassDataset
     params:
-      img_h: 512
-      img_w: 512
+      img_h: 256
+      img_w: 256
       labels:
       - 0
       - 6
       - 7
       - 10
-      augs: segmentation_baseline.augs.NiiasTrainAugs
       images_dir: path_to_images
       masks_dir: path_to_masks
   valid:
-    target: segmentation_baseline.datasets.NiiasDataset
+    target: segmentation_baseline.datasets.MulticlassDataset
     params:
-      img_h: 512
-      img_w: 512
+      img_h: 256
+      img_w: 256
       labels:
       - 0
       - 6
