@@ -6,7 +6,7 @@ common:
   folds_count: null
   batch_size: 32
   num_workers: 8
-  epochs: 512
+  epochs: 2048
   wandb: false
 
 model:
@@ -16,9 +16,6 @@ model:
     classes: 1
     
 criterions:
-# - target: segmentation_models_pytorch.losses.SoftBCEWithLogitsLoss
-#   weight: 0.25
-#   name: bce
 - target: segmentation_models_pytorch.losses.DiceLoss
   params:
     mode: binary
@@ -42,8 +39,8 @@ optimizers:
   scheduler:
     target: pl_bolts.optimizers.lr_scheduler.LinearWarmupCosineAnnealingLR
     params:
-      warmup_epochs: 32
-      max_epochs: 512
+      warmup_epochs: 128
+      max_epochs: 2048
       warmup_start_lr: 0.001
     additional:
       monitor: dice_valid
