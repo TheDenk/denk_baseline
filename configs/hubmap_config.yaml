@@ -3,9 +3,9 @@ common:
   - 0
   task: 'binary'
   seed: 17
-  batch_size: 32
+  batch_size: 4
   num_workers: 8
-  epochs: 128
+  epochs: 512
 
 model:
   target: segmentation_models_pytorch.Unet
@@ -31,26 +31,17 @@ criterions:
   name: tversky
 
 optimizers:
-- target: torch.optim.Adam
+- target: torch.optim.AdamW
   params:
-    lr: 0.0015
+    lr: 0.0002
   scheduler:
     target: pl_bolts.optimizers.lr_scheduler.LinearWarmupCosineAnnealingLR
     params:
       warmup_epochs: 32
-      max_epochs: 128
-      warmup_start_lr: 0.001
+      max_epochs: 512
+      warmup_start_lr: 0.0001
     additional:
       monitor: dice_valid
-    # target: torch.optim.lr_scheduler.ReduceLROnPlateau
-    # params:
-    #   mode: max
-    #   factor: 0.8
-    #   patience: 10
-    #   min_lr: 0.00000001
-    #   verbose: false
-    # additional:
-    #   monitor: dice_valid
     
 metrics:
 - target: segmentation_models_pytorch.utils.metrics.IoU
@@ -77,20 +68,20 @@ datasets:
   train:
     target: segmentation_baseline.datasets.HubmapDataset
     params:
-      img_h: 256
-      img_w: 256
+      img_h: 768
+      img_w: 768
+      augs: segmentation_baseline.augs.HubmapTrainAugs
       images_dir: /home/user/datasets/hubmap-organ-segmentation/train_images
       masks_dir: /home/user/datasets/hubmap-organ-segmentation/train_masks
       csv_path: /home/user/datasets/hubmap-organ-segmentation/train_split.csv
   valid:
     target: segmentation_baseline.datasets.HubmapDataset
     params:
-      img_h: 256
-      img_w: 256
+      img_h: 768
+      img_w: 768
       images_dir: /home/user/datasets/hubmap-organ-segmentation/train_images
       masks_dir: /home/user/datasets/hubmap-organ-segmentation/train_masks
       csv_path: /home/user/datasets/hubmap-organ-segmentation/valid_split.csv
-
 
 # loggers:
 # - target: pytorch_lightning.loggers.TensorBoardLogger

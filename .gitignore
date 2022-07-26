@@ -160,3 +160,10 @@ cython_debug/
 #.idea/
 models/
 lightning_logs/
+
+baseline.ipynb
+inference.ipynb
+dataset.ipynb
+patch_binary_dataset.ipynb
+configs/hubmap_config.yaml
+configs/niias_config.yaml

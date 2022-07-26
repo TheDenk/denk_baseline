@@ -56,7 +56,7 @@ callbacks:
 
 datasets:
   train:
-    target: segmentation_baseline.datasets.NiiasDataset
+    target: segmentation_baseline.datasets.MulticlassDataset
     params:
       img_h: 512
       img_w: 512
@@ -69,7 +69,7 @@ datasets:
       images_dir: path_to_images
       masks_dir: path_to_masks
   valid:
-    target: segmentation_baseline.datasets.NiiasDataset
+    target: segmentation_baseline.datasets.MulticlassDataset
     params:
       img_h: 512
       img_w: 512

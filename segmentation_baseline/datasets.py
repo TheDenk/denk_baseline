@@ -1,11 +1,12 @@
 import os
 
 import cv2
+import torch
 import numpy as np
 import pandas as pd
 from torch.utils.data import Dataset
 
-from .utils import preprocess_image, preprocess_mask2onehot, preprocess_single_mask, get_img_names
+from .utils import preprocess_image, preprocess_mask2onehot, preprocess_single_mask, get_img_names, resize_if_need, make_img_padding, split_on_patches
 
 
 class MulticlassDataset(Dataset):
@@ -81,11 +82,11 @@ class BinaryDataset(Dataset):
 
 
 class HubmapDataset(Dataset):
-    def __init__(self, images_dir, masks_dir, labels, csv_path, img_w=None, img_h=None, augs=None):
+    def __init__(self, images_dir, masks_dir, csv_path, labels=None, img_w=None, img_h=None, augs=None):
         self.df = pd.read_csv(csv_path)
         self.images_dir = images_dir
         self.masks_dir = masks_dir
-        self.labels = labels
+        self.labels = labels if labels else [0, 1]
         self.img_w = img_w
         self.img_h = img_h
         self.augs = augs
@@ -106,8 +107,8 @@ class HubmapDataset(Dataset):
             image = item['image']
             mask = item['mask']
 
-        mean = np.array([0.7720342, 0.74582646, 0.76392896])
-        std = np.array([0.24745085, 0.26182273, 0.25782376])
+        mean = np.array([0.485, 0.456, 0.406]) 
+        std = np.array([0.229, 0.224, 0.225])
 
         image = preprocess_image(image, img_w=self.img_w, img_h=self.img_h, mean=mean, std=std)
         mask = preprocess_single_mask(mask, self.labels, img_w=self.img_w, img_h=self.img_h)
