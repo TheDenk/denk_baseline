@@ -3,7 +3,7 @@ from argparse import ArgumentParser
 from omegaconf import OmegaConf
 from pytorch_lightning import Trainer, seed_everything
 
-from segmentation_baseline.models import MulticlassModel, BinaryModel
+from segmentation_baseline.lightning_models import MulticlassModel, BinaryModel
 from segmentation_baseline.datamodules import DataModule
 from segmentation_baseline.utils import instantiate_from_config
 

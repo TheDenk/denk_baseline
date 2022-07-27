@@ -13,3 +13,4 @@ albumentations==1.2.1
 timm==0.4.12
 ttach==0.0.3
 segmentation_models_pytorch==0.2.1
+tensorboard==2.9.1

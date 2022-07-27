@@ -152,21 +152,16 @@ dmypy.json
 # Cython debug symbols
 cython_debug/
 
-# PyCharm
-#  JetBrains specific template is maintained in a separate JetBrains.gitignore that can
-#  be found at https://github.com/github/gitignore/blob/main/Global/JetBrains.gitignore
-#  and can be added to the global gitignore or merged into this file.  For a more nuclear
-#  option (not recommended) you can uncomment the following to ignore the entire idea folder.
-#.idea/
 models/
+weights/
 lightning_logs/
 
 baseline.ipynb
 inference.ipynb
 dataset.ipynb
 baseline_train_segnet.ipynb
-patch_binary_datasets.ipynb
+binary_datasets_patch.ipynb
 
-configs/
-!configs/hubmap_config.yaml
-!configs/niias_config.yaml
+hubmap_config.yaml
+niias_config.yaml
+

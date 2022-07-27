@@ -70,8 +70,8 @@ class MulticlassModel(BaseModel):
         
     def _common_step(self, batch, batch_idx, stage):
         gt_img, sg_mask, oh_mask = batch['image'], batch['sg_mask'].long(), batch['oh_mask'].float()
-        pr_mask = self.model(gt_img)
-        pr_mask = F.interpolate(pr_mask, size=batch['image'].shape[2:], mode='bilinear', align_corners=False)
+        pr_mask = self.model(gt_img.contiguous())
+        # pr_mask = F.interpolate(pr_mask, size=batch['image'].shape[2:], mode='bilinear', align_corners=False)
 
         loss = 0
         for c_name in self.criterions.keys():
@@ -95,8 +95,8 @@ class BinaryModel(BaseModel):
     
     def _common_step(self, batch, batch_idx, stage):
         gt_img, gt_mask = batch['image'], batch['mask'].float()
-        pr_mask = self.model(gt_img)
-        pr_mask = F.interpolate(pr_mask, size=batch['image'].shape[2:], mode='bilinear', align_corners=False)
+        pr_mask = self.model(gt_img.contiguous())
+        # pr_mask = F.interpolate(pr_mask, size=batch['image'].shape[2:], mode='bilinear', align_corners=False)
         
         loss = 0
         for c_name in self.criterions.keys():
