@@ -1,0 +1,82 @@
+common:
+  gpus:
+  - 0
+  task: 'multiclass'
+  seed: 17
+  batch_size: 8
+  num_workers: 8
+  epochs: 128
+
+model:
+  target: segmentation_models_pytorch.Unet
+  params:
+    encoder_name: resnet34
+    classes: 4
+    
+criterions:
+- target: segmentation_models_pytorch.losses.FocalLoss
+  params:
+    mode: multiclass
+  weight: 0.5
+  name: focal
+- target: segmentation_models_pytorch.losses.JaccardLoss
+  params:
+    mode: multiclass
+  weight: 0.5
+  name: jaccard
+
+optimizers:
+- target: torch.optim.Adam
+  params:
+    lr: 0.003
+  scheduler:
+    target: pl_bolts.optimizers.lr_scheduler.LinearWarmupCosineAnnealingLR
+    params:
+      warmup_epochs: 16
+      max_epochs: 128
+      warmup_start_lr: 0.001
+    additional:
+      monitor: iou_valid
+
+metrics:
+- target: segmentation_models_pytorch.utils.metrics.IoU
+  params:
+    threshold: 0.5
+  name: iou
+  use_bg: False
+callbacks:
+- target: pytorch_lightning.callbacks.LearningRateMonitor
+- target: pytorch_lightning.callbacks.ModelCheckpoint
+  params:
+    filename: best-{epoch:02d}-{iou_valid:2.2f}
+    monitor: iou_valid
+    mode: max
+    save_top_k: 1
+    save_last: true
+
+datasets:
+  train:
+    target: segmentation_baseline.datasets.MulticlassDataset
+    params:
+      img_h: 512
+      img_w: 1024
+      labels:
+      - 0
+      - 6
+      - 7
+      - 10
+      augs: segmentation_baseline.augs.NiiasTrainAugs
+      images_dir: path_to_images
+      masks_dir: path_to_masks
+  valid:
+    target: segmentation_baseline.datasets.MulticlassDataset
+    params:
+      img_h: 512
+      img_w: 1024
+      labels:
+      - 0
+      - 6
+      - 7
+      - 10
+      images_dir: path_to_images
+      masks_dir: path_to_masks

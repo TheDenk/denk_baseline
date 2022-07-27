@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 from torch.utils.data import Dataset
 
-from .utils import preprocess_image, preprocess_mask2onehot, preprocess_single_mask, get_img_names, resize_if_need, make_img_padding, split_on_patches
+from .utils import preprocess_image, preprocess_mask2onehot, preprocess_single_mask, get_img_names
 
 
 class MulticlassDataset(Dataset):
