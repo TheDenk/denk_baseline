@@ -41,9 +41,10 @@ def preprocess_single_mask(image, labels, img_w=None, img_h=None):
     img = torch.from_numpy(img)
     return img
 
-def process_img2np(image):
+def process_img2np(image, mean=np.array([0, 0, 0]), std=np.array([1, 1, 1])):
     img = image.cpu().clone()
-    img = img.permute(1, 2, 0).numpy() * 255
+    img = img.permute(1, 2, 0).numpy()
+    img = (img*std + mean) * 255
     img = np.clip(img, 0, 255).astype(np.uint8)
     return img
 

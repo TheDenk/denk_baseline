@@ -7,11 +7,20 @@ from segmentation_baseline.lightning_models import MulticlassModel, BinaryModel
 from segmentation_baseline.datamodules import DataModule
 from segmentation_baseline.utils import instantiate_from_config
 
+
 def parse_args():
     parser = ArgumentParser()
     parser.add_argument('--config', default='./configs/base_config.yaml')
     args = parser.parse_args()
     return args
+
+def parse_loggers(config):
+    str_loggers = config.get('loggers', [])
+    loggers = []
+    for srt_logger in str_loggers:
+        logger = instantiate_from_config(srt_logger)
+        loggers.append(logger)
+    return loggers
 
 if __name__ == '__main__':
     args = parse_args()
@@ -20,13 +29,15 @@ if __name__ == '__main__':
     
     seed_everything(config['common']['seed'], workers=True)
 
+    
+
     datamodule = DataModule(config)
     model = BinaryModel(config) if config['common']['task'] == 'binary' else MulticlassModel(config) 
 
     trainer = Trainer(
         max_epochs=config['common']['epochs'], 
         gpus=config['common']['gpus'],
-        # logger=[instantiate_from_config(x) for x in config['loggers']],
+        logger=parse_loggers(config),
         )
 
     trainer.fit(model, datamodule) 
