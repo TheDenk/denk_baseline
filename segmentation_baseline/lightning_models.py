@@ -1,6 +1,4 @@
-
-import torch
-import torch.nn.functional as F
+import os
 import pytorch_lightning as pl
 
 from .utils import instantiate_from_config, get_obj_from_str
@@ -53,12 +51,19 @@ class BaseModel(pl.LightningModule):
                     'scheduler':scheduler,
                     **item['scheduler']['additional'],
                 })
-        
         return optimizers, schedulers
     
     def configure_callbacks(self):
         callbacks = []
+        
         for item in self.config.get('callbacks', []):
+            params = item.get('params', {})
+            if 'ModelCheckpoint' in item['target']:
+                item['params'] = {
+                    **params,
+                    'dirpath': self.config['common']['save_path'],
+                }
+
             callback = instantiate_from_config(item)
             callbacks.append(callback)  
         return callbacks

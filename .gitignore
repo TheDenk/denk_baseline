@@ -155,6 +155,8 @@ cython_debug/
 models/
 weights/
 lightning_logs/
+wandb/
+output/
 
 baseline.ipynb
 inference.ipynb
