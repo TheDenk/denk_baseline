@@ -162,7 +162,9 @@ baseline.ipynb
 inference.ipynb
 dataset.ipynb
 baseline_train_segnet.ipynb
-binary_datasets_patch.ipynb
+binary_datasets_for_patch.ipynb
+patch_testing.ipynb
+full_testing.ipynb
 
 hubmap_config.yaml
 

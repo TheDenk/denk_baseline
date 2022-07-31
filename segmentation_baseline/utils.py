@@ -146,6 +146,19 @@ def resize_if_need(image, max_h, max_w, interpolation=cv2.INTER_NEAREST):
     img = cv2.resize(img, (w, h), interpolation=interpolation)
     return img
 
+def resize_if_need_up(image, max_h, max_w, interpolation=cv2.INTER_LINEAR):
+    img = image.copy()
+    img_h, img_w = img.shape[:2]
+    
+    if max_h <= img_h and max_w <= img_w:
+        return img
+    
+    coef = min(max_h / img_h, max_w / img_w)
+    h = int(img_h * coef)
+    w = int(img_w * coef)
+    img = cv2.resize(img, (w, h), interpolation=interpolation)
+    return img
+
 def split_on_chunks(data, n_chunks):
     chunk_size = int(len(data) / n_chunks)
     chunks = [data[i:i+chunk_size] for i in range(0, len(data), chunk_size)]
