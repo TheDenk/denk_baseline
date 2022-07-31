@@ -137,68 +137,6 @@ def make_img_padding(image, max_h, max_w):
     bg[y1:y2, x1:x2, :] = img.copy()
     return bg
 
-def split_on_chunks(data, n_chunks):
-    chunk_size = int(len(data) / n_chunks)
-    chunks = [data[i:i+chunk_size] for i in range(0, len(data), chunk_size)]
-    return chunks
-
-def split_on_patches(image, patch_h, patch_w, step_x=None, step_y=None):
-    img_h, img_w = image.shape[:2]
-    
-    patches = []
-    step_y = step_y if step_y else patch_h
-    step_x = step_x if step_x else patch_w
-    
-    for y in range(0, img_h - (patch_h - step_y), step_y):
-        for x in range(0, img_w - (patch_w - step_x), step_x):
-            patches.append(image[y:y + patch_h, x:x + patch_w])
-    
-    return np.array(patches)
-
-def glue_image_patches(patches, patch_h, patch_w, img_h, img_w, img_c, step_x=None, step_y=None):
-    if img_c:
-        bg = np.zeros((img_h, img_w, img_c), dtype=np.uint8)
-    else:
-        bg = np.zeros((img_h, img_w), dtype=np.uint8)
-        
-    p_index = 0
-    step_y = step_y if step_y else patch_h
-    step_x = step_x if step_x else patch_w
-    
-    for y in range(0, img_h - (patch_h - step_y), step_y):
-        for x in range(0, img_w - (patch_w - step_x), step_x):
-            bg[y:y + patch_h, x:x + patch_w] = patches[p_index]
-            p_index += 1
-            
-    return bg
-
-def glue_mask_patches(patches, patch_h, patch_w, img_h, img_w, img_c, step_x=None, step_y=None):
-    if img_c:
-        bg = np.zeros((img_h, img_w, img_c), dtype=np.float32)
-    else:
-        bg = np.zeros((img_h, img_w), dtype=np.float32)
-        
-    p_index = 0
-    step_y = step_y if step_y else patch_h
-    step_x = step_x if step_x else patch_w
-    
-    over_h = patch_h - step_y
-    over_w = patch_w - step_x
-    
-    for y in range(0, img_h - (patch_h - step_y), step_y):
-        for x in range(0, img_w - (patch_w - step_x), step_x):
-            
-            bg[y:y + patch_h, x:x + patch_w] += patches[p_index]
-            p_index += 1
-            
-            if over_w and x > 0:
-                bg[y:y + patch_h, x:x + over_w] /= 2
-                
-            if over_h and y > 0:
-                bg[y:y + over_h, x:x + patch_w] /= 2
-    
-    return bg
-
 def resize_if_need(image, max_h, max_w, interpolation=cv2.INTER_NEAREST):
     img = image.copy()
     img_h, img_w = img.shape[:2]
@@ -207,3 +145,8 @@ def resize_if_need(image, max_h, max_w, interpolation=cv2.INTER_NEAREST):
     w = int(img_w / coef)
     img = cv2.resize(img, (w, h), interpolation=interpolation)
     return img
+
+def split_on_chunks(data, n_chunks):
+    chunk_size = int(len(data) / n_chunks)
+    chunks = [data[i:i+chunk_size] for i in range(0, len(data), chunk_size)]
+    return chunks
