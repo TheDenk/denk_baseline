@@ -100,6 +100,10 @@ class HubmapDataset(Dataset):
         img_path = os.path.join(self.images_dir, img_name)
         msk_path = os.path.join(self.masks_dir, img_name)
         image = cv2.imread(img_path)
+        img_h, img_w = image.shape[:2]
+        if np.random.random() > 0.5:
+            image = cv2.resize(image, dsize=None, fx=0.064, fy=0.064, interpolation=cv2.INTER_LINEAR)
+            image = cv2.resize(image, dsize=(img_w, img_h), interpolation=cv2.INTER_LINEAR)
         mask = cv2.imread(msk_path, 0)
 
         if self.augs is not None:

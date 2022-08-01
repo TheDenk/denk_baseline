@@ -137,7 +137,7 @@ def make_img_padding(image, max_h, max_w):
     bg[y1:y2, x1:x2, :] = img.copy()
     return bg
 
-def resize_if_need(image, max_h, max_w, interpolation=cv2.INTER_NEAREST):
+def resize_if_need_down(image, max_h, max_w, interpolation=cv2.INTER_NEAREST):
     img = image.copy()
     img_h, img_w = img.shape[:2]
     coef = 1 if img_h <= max_h and img_w <= max_w else max(img_h / max_h, img_w / max_w)
