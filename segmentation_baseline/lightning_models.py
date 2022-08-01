@@ -1,4 +1,6 @@
 import os
+
+import torch
 import pytorch_lightning as pl
 from segmentation_baseline.segformer import SegFormer
 
@@ -99,13 +101,13 @@ class BinaryModel(BaseModel):
     def __init__(self, config):
         super().__init__(config)
 
-        # state_dict = {}
-        # ckpt = torch.load('./weights/segformer.b2.ade.pth', map_location='cpu')
-        # for name, params in ckpt.items():
-        #     if name in ['decode_head.linear_pred.weight', 'decode_head.linear_pred.bias']:
-        #         continue
-        #     state_dict[name] = params
-        # self.model.load_state_dict(state_dict, strict=False)
+        state_dict = {}
+        ckpt = torch.load('./weights/segformer.b2.ade.pth', map_location='cpu')
+        for name, params in ckpt.items():
+            if name in ['decode_head.linear_pred.weight', 'decode_head.linear_pred.bias']:
+                continue
+            state_dict[name] = params
+        self.model.load_state_dict(state_dict, strict=False)
 
     def _common_step(self, batch, batch_idx, stage):
         gt_img, gt_mask = batch['image'], batch['mask'].float()
