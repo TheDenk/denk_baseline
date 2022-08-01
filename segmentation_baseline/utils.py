@@ -23,19 +23,19 @@ def preprocess_image(image, img_w=None, img_h=None, mean=np.array([0, 0, 0]), st
     img = torch.from_numpy(img).permute(2, 0, 1)
     return img
 
-def preprocess_mask2onehot(image, labels, img_w=None, img_h=None):
+def preprocess_mask2onehot(image, labels, img_w=None, img_h=None, interpolation=cv2.INTER_LINEAR):
     input_img = image.copy()
     if img_w and img_h:
-        img = cv2.resize(input_img, (img_w, img_h), interpolation=cv2.INTER_NEAREST)
+        img = cv2.resize(input_img, (img_w, img_h), interpolation=interpolation)
     img = np.array([(img == x) for x in labels])
     img = np.stack(img, axis=-1).astype(np.float32)
     img = torch.from_numpy(img).permute(2, 0, 1)
     return img
 
-def preprocess_single_mask(image, labels, img_w=None, img_h=None):
+def preprocess_single_mask(image, labels, img_w=None, img_h=None, interpolation=cv2.INTER_NEAREST):
     img = image.copy()
     if img_w and img_h:
-        img = cv2.resize(img, (img_w, img_h), interpolation=cv2.INTER_NEAREST)
+        img = cv2.resize(img, (img_w, img_h), interpolation=interpolation)
     for index, label in enumerate(labels):
         img[img == label] = index
     img = torch.from_numpy(img)
