@@ -157,6 +157,8 @@ weights/
 lightning_logs/
 wandb/
 output/
+oof_split/
+full_split/
 
 baseline.ipynb
 inference.ipynb

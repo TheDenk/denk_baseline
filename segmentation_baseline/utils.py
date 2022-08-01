@@ -14,28 +14,28 @@ def get_img_names(folder, img_format='png'):
     img_names = [os.path.basename(x) for x in img_paths]
     return img_names
 
-def preprocess_image(image, img_w=None, img_h=None, mean=np.array([0, 0, 0]), std=np.array([1, 1, 1])):
+def preprocess_image(image, img_w=None, img_h=None, interpolation=cv2.INTER_LINEAR, mean=np.array([0, 0, 0]), std=np.array([1, 1, 1])):
     img = image.copy()
     if img_w and img_h:
         img = cv2.resize(img, (img_w, img_h))
-    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB, interpolation=interpolation)
     img = ((img.astype(np.float32) / 255.0 - mean) / std).astype(np.float32)
     img = torch.from_numpy(img).permute(2, 0, 1)
     return img
 
-def preprocess_mask2onehot(image, labels, img_w=None, img_h=None):
+def preprocess_mask2onehot(image, labels, img_w=None, img_h=None, interpolation=cv2.INTER_LINEAR):
     input_img = image.copy()
     if img_w and img_h:
-        img = cv2.resize(input_img, (img_w, img_h), interpolation=cv2.INTER_NEAREST)
+        img = cv2.resize(input_img, (img_w, img_h), interpolation=interpolation)
     img = np.array([(img == x) for x in labels])
     img = np.stack(img, axis=-1).astype(np.float32)
     img = torch.from_numpy(img).permute(2, 0, 1)
     return img
 
-def preprocess_single_mask(image, labels, img_w=None, img_h=None):
+def preprocess_single_mask(image, labels, img_w=None, img_h=None, interpolation=cv2.INTER_NEAREST):
     img = image.copy()
     if img_w and img_h:
-        img = cv2.resize(img, (img_w, img_h), interpolation=cv2.INTER_NEAREST)
+        img = cv2.resize(img, (img_w, img_h), interpolation=interpolation)
     for index, label in enumerate(labels):
         img[img == label] = index
     img = torch.from_numpy(img)
