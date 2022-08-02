@@ -90,9 +90,26 @@ class HubmapDataset(Dataset):
         self.img_w = img_w
         self.img_h = img_h
         self.augs = augs
+
+        self.normalizers = self.get_stain_normalizers()
         
     def __len__(self):
         return self.df.shape[0]
+
+    def get_stain_normalizers(self):
+        import torchstain as ts
+        targets = [
+            cv2.imread('./stain_images/1.jpg'),
+            cv2.imread('./stain_images/2.jpg'),
+            cv2.imread('./stain_images/3.jpg'),
+            cv2.imread('./stain_images/4.jpg'),
+        ] 
+        normalizers = []
+        for target in targets:
+            normalizer = ts.MacenkoNormalizer(backend='numpy')
+            normalizer.fit(target)
+            normalizers.append(normalizer)
+        return normalizers
 
     def __getitem__(self, index):
         info = self.df.iloc[index]
@@ -101,9 +118,15 @@ class HubmapDataset(Dataset):
         msk_path = os.path.join(self.masks_dir, img_name)
         image = cv2.imread(img_path)
         img_h, img_w = image.shape[:2]
+
         if np.random.random() > 0.5:
             image = cv2.resize(image, dsize=None, fx=0.064, fy=0.064, interpolation=cv2.INTER_LINEAR)
             image = cv2.resize(image, dsize=(img_w, img_h), interpolation=cv2.INTER_LINEAR)
+        
+        if np.random.random() > 0.66:
+            normalizer = np.random.choice(self.normalizers) 
+            image, _, _ = normalizer.normalize(I=image, stains=True)
+
         mask = cv2.imread(msk_path, 0)
 
         if self.augs is not None:

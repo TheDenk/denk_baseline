@@ -48,7 +48,7 @@ def parse_loggers(config):
             }
         logger = instantiate_from_config(str_logger)
         loggers.append(logger)
-    return loggers
+    return loggers if len(loggers) else None
 
 
 if __name__ == '__main__':
