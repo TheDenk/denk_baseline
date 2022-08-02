@@ -67,7 +67,8 @@ if __name__ == '__main__':
         max_epochs=config['common']['epochs'], 
         gpus=config['common']['gpus'],
         logger=parse_loggers(config),
-        accelerator='dp',
+        strategy='dp',
+        precision='bf16',
         )
 
     trainer.fit(model, datamodule) 

@@ -111,28 +111,80 @@ class HubmapDataset(Dataset):
             normalizers.append(normalizer)
         return normalizers
 
+    def get_mixup(self, df, organ):
+        sub_df = df[df['organ'] == organ].sample(n=4, replace=True)
+
+        img_ids = [row['id'] for i, row in sub_df.iterrows()]
+        np.random.shuffle(img_ids)
+
+        half_h = self.img_h // 2
+        half_w = self.img_w // 2
+
+        r_image = np.zeros((self.img_h, self.img_w, 3), dtype=np.uint8)
+        r_mask = np.zeros((self.img_h, self.img_w), dtype=np.uint8)
+
+        for i, img_id in enumerate(img_ids):
+            img_name = f'{img_id}.tiff'
+            img_path = os.path.join(self.images_dir, img_name)
+            mask_path = os.path.join(self.masks_dir, img_name)
+
+            image = cv2.imread(img_path)
+            mask = cv2.imread(mask_path, 0)
+
+            if np.random.random() > 0.5:
+                img_h, img_w = image.shape[:2]
+                image = cv2.resize(image, dsize=None, fx=0.064, fy=0.064, interpolation=cv2.INTER_LINEAR)
+                image = cv2.resize(image, (img_w, img_h), interpolation=cv2.INTER_LINEAR)
+
+            image = cv2.resize(image, (self.img_w, self.img_h), interpolation=cv2.INTER_LINEAR)
+            mask = cv2.resize(mask, (self.img_w, self.img_h), interpolation=cv2.INTER_LINEAR)
+
+            if np.random.random() > 0.5:
+                normalizer = np.random.choice(self.normalizers) 
+                image, _, _ = normalizer.normalize(I=image, stains=True)
+
+            if i == 0:
+                r_image[0:half_h, 0:half_w] = image[0:half_h, 0:half_w].copy()
+                r_mask[0:half_h, 0:half_w] = mask[0:half_h, 0:half_w].copy()
+            elif i == 1:
+                r_image[0:half_h, half_w:] = image[0:half_h, half_w:].copy()
+                r_mask[0:half_h, half_w:] = mask[0:half_h, half_w:].copy()
+            elif i == 2:
+                r_image[half_h:, 0:half_w] = image[half_h:, 0:half_w].copy()
+                r_mask[half_h:, 0:half_w] = mask[half_h:, 0:half_w].copy()
+            elif i == 3:
+                r_image[half_h:, half_w:] = image[half_h:, half_w:].copy()
+                r_mask[half_h:, half_w:] = mask[half_h:, half_w:].copy()
+        
+        return r_image, r_mask
+
     def __getitem__(self, index):
         info = self.df.iloc[index]
-        img_name = '{}.tiff'.format(info['id'])
-        img_path = os.path.join(self.images_dir, img_name)
-        msk_path = os.path.join(self.masks_dir, img_name)
-        image = cv2.imread(img_path)
-        img_h, img_w = image.shape[:2]
-
-        if np.random.random() > 0.5:
-            image = cv2.resize(image, dsize=None, fx=0.064, fy=0.064, interpolation=cv2.INTER_LINEAR)
-            image = cv2.resize(image, dsize=(img_w, img_h), interpolation=cv2.INTER_LINEAR)
         
-        if np.random.random() > 0.66:
-            normalizer = np.random.choice(self.normalizers) 
-            image, _, _ = normalizer.normalize(I=image, stains=True)
+        if np.random.random() < 0.2:
+            organ = info['organ']
+            image, mask = self.get_mixup(self.df, organ)
+        else:
+            img_name = '{}.tiff'.format(info['id'])
+            img_path = os.path.join(self.images_dir, img_name)
+            msk_path = os.path.join(self.masks_dir, img_name)
+            image = cv2.imread(img_path)
+            img_h, img_w = image.shape[:2]
 
-        mask = cv2.imread(msk_path, 0)
+            if np.random.random() > 0.5:
+                image = cv2.resize(image, dsize=None, fx=0.064, fy=0.064, interpolation=cv2.INTER_LINEAR)
+                image = cv2.resize(image, dsize=(img_w, img_h), interpolation=cv2.INTER_LINEAR)
+            
+            if np.random.random() > 0.66:
+                normalizer = np.random.choice(self.normalizers) 
+                image, _, _ = normalizer.normalize(I=image, stains=True)
 
-        if self.augs is not None:
-            item = self.augs(image=image, mask=mask)
-            image = item['image']
-            mask = item['mask']
+            mask = cv2.imread(msk_path, 0)
+
+            if self.augs is not None:
+                item = self.augs(image=image, mask=mask)
+                image = item['image']
+                mask = item['mask']
 
         mean = np.array([0.485, 0.456, 0.406]) 
         std = np.array([0.229, 0.224, 0.225])

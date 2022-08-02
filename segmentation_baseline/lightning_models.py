@@ -118,7 +118,7 @@ class BinaryModel(BaseModel):
 
     def _common_step(self, batch, batch_idx, stage):
         gt_img, gt_mask = batch['image'], batch['mask'].float()
-        pr_mask = self.model(gt_img.contiguous())
+        pr_mask = self.model(gt_img.contiguous()).float()
         # pr_mask = F.interpolate(pr_mask, size=batch['image'].shape[2:], mode='bilinear', align_corners=False)
         
         loss = 0
