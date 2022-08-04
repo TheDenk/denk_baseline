@@ -39,7 +39,7 @@ python main.py --config ./configs/example_multiclass_config.yaml
 ##### Watch tensorboard
 
 ```pyhton
-tensorboard --logdir=lightning_logs/
+tensorboard --logdir=output/
 ```
 
 ## Contacts

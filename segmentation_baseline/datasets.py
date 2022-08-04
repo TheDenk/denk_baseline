@@ -194,5 +194,5 @@ class HubmapDataset(Dataset):
 
         return {
             'image': image, 
-            'mask': mask.unsqueeze(0),
+            'mask': mask.unsqueeze(0).float(),
         }

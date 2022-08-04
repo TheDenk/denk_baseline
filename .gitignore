@@ -167,6 +167,8 @@ baseline_train_segnet.ipynb
 binary_datasets_for_patch.ipynb
 patch_testing.ipynb
 full_testing.ipynb
+resize_testing.ipynb
+swin_transformer.ipynb
 
 hubmap_config.yaml
 
