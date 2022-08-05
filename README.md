@@ -4,7 +4,7 @@ Common scripts for fast neural network training for the task of binary and multi
 
 This repo combines approaches of <a href="https://github.com/Lightning-AI/lightning">PytorchLightning</a> and <a href="https://github.com/qubvel/segmentation_models.pytorch">Segmentation Models Pytorch</a> for models training.  
 
-Initially trained models and logs are saved in ```./lightning_logs/experiment_% folder. ``` 
+Initially trained models and logs are saved in ```./output/project folder/experiment name``` 
 
 ### Basic usage
 

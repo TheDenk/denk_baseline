@@ -4,21 +4,6 @@ import pytorch_lightning as pl
 from .utils import instantiate_from_config, get_obj_from_str
 
 
-def load_checkpoint(model, config):
-    state_dict = {}
-    ckpt = torch.load(config['checkpoint'], map_location='cpu')
-
-    if 'state_dict' in ckpt:
-        ckpt = ckpt['state_dict']
-
-    for name, params in ckpt.items():
-        if name in config['ignore_layers']:
-            continue
-        state_dict[name] = params
-    model.load_state_dict(state_dict, strict=False)
-    return model
-
-
 class BaseModel(pl.LightningModule):
     def __init__(self, config):
         super().__init__()
@@ -26,7 +11,7 @@ class BaseModel(pl.LightningModule):
         self.model = instantiate_from_config(config['model'])
 
         if 'weights' in self.config['model']:
-            self.model = load_checkpoint(self.model, self.config['model']['weights'])
+            self.model = self.load_checkpoint(self.config['model']['weights'])
         
         self.criterions = {x['name']: instantiate_from_config(x) for x in config['criterions']}
         self.crit_weights = {x['name']: x['weight'] for x in config['criterions']}
@@ -86,6 +71,23 @@ class BaseModel(pl.LightningModule):
             callbacks.append(callback)  
         return callbacks
 
+    def load_checkpoint(self, config):
+        ckpt = torch.load(config['checkpoint'], map_location='cpu')
+        if 'state_dict' in ckpt:
+            ckpt = ckpt['state_dict']
+
+        if 'ignore_layers' in ckpt:
+            state_dict = {}
+            for name, params in ckpt.items():
+                if name in config['ignore_layers']:
+                    continue
+                state_dict[name] = params
+
+            print('LOAD MODEL: ', self.load_state_dict(state_dict, strict=False))
+        else:
+            print('LOAD MODEL: ', self.load_state_dict(ckpt, strict=False))
+
+
 class MulticlassModel(BaseModel):
     def __init__(self, config):
         super().__init__(config)
@@ -94,7 +96,6 @@ class MulticlassModel(BaseModel):
     def _common_step(self, batch, batch_idx, stage):
         gt_img, sg_mask, oh_mask = batch['image'], batch['sg_mask'].long(), batch['oh_mask'].float()
         pr_mask = self.model(gt_img.contiguous())
-        # pr_mask = F.interpolate(pr_mask, size=batch['image'].shape[2:], mode='bilinear', align_corners=False)
 
         loss = 0
         for c_name in self.criterions.keys():
@@ -112,6 +113,7 @@ class MulticlassModel(BaseModel):
             'loss': loss,
         }
 
+
 class BinaryModel(BaseModel):
     def __init__(self, config):
         super().__init__(config)
@@ -119,7 +121,6 @@ class BinaryModel(BaseModel):
     def _common_step(self, batch, batch_idx, stage):
         gt_img, gt_mask = batch['image'], batch['mask'].float()
         pr_mask = self.model(gt_img.contiguous()).float()
-        # pr_mask = F.interpolate(pr_mask, size=batch['image'].shape[2:], mode='bilinear', align_corners=False)
         
         loss = 0
         for c_name in self.criterions.keys():
