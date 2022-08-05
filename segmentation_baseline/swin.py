@@ -8,7 +8,7 @@ import numpy as np
 import torch.nn.functional as F
 from torch import nn
 
-cfg = dict(
+config = dict(
         basic = dict(
             swin=dict(
                 embed_dim=96,
@@ -29,7 +29,7 @@ cfg = dict(
         ),
 
         swin_small_patch4_window7_224_22k=dict(
-            checkpoint = './output/hubmap-2022/fold-0-swin-768/last.ckpt',
+            # checkpoint = './output/hubmap-2022/fold-0-swin-768/last.ckpt',
             swin = dict(
                 embed_dim=96,
                 depths=[2, 2, 18, 2],
@@ -45,6 +45,49 @@ cfg = dict(
             ),
         ),
     )
+
+class SwinNet(nn.Module):
+    def load_pretrain(self, ckpt_path):
+        checkpoint = torch.load(ckpt_path, map_location='cpu')['state_dict']
+        ckpt = {}
+        for name, params in checkpoint.items():
+            ckpt[name.replace('model.', '')] = params
+        self.load_state_dict(ckpt, strict=False)
+
+    def __init__( self, config):
+        super(SwinNet, self).__init__()
+        self.output_type = ['inference', 'loss']
+        self.cfg = config
+
+        self.rgb = RGB()
+        self.arch = 'swin_small_patch4_window7_224_22k'
+        
+        self.encoder = SwinTransformerV1(
+            ** {**config['basic']['swin'], **config[self.arch]['swin'],
+                **{'out_norm' : LayerNorm2d} }
+        )
+        encoder_dim =config[self.arch]['upernet']['in_channels']
+        self.decoder = UPerDecoder(
+            in_dim=encoder_dim,
+            ppm_pool_scale=[1, 2, 3, 6],
+            ppm_dim=512,
+            fpn_out_dim=256
+        )
+        self.logit = nn.Sequential(
+            nn.Conv2d(256, 1, kernel_size=1)
+        )
+        self.aux = nn.ModuleList([
+            nn.Conv2d(256, 1, kernel_size=1, padding=0) for i in range(4)
+        ])
+
+    def forward(self, x):
+        x = self.rgb(x)
+        encoder = self.encoder(x)
+        last, _ = self.decoder(encoder)
+        logit = self.logit(last)
+        logit = F.interpolate(logit, size=None, scale_factor=4, mode='bilinear', align_corners=False)
+        return logit
+
 
 def _ntuple(n):
     def parse(x):
@@ -746,66 +789,10 @@ class LayerNorm2d(nn.Module):
         return x
     
 def criterion_aux_loss(logit, mask):
-    mask = F.interpolate(mask,size=logit.shape[-2:], mode='nearest')
-    loss = F.binary_cross_entropy_with_logits(logit,mask)
+    mask = F.interpolate(mask, size=logit.shape[-2:], mode='nearest')
+    loss = F.binary_cross_entropy_with_logits(logit, mask)
     return loss
 
-
-class Net(nn.Module):
-    def load_pretrain( self,):
-        checkpoint = self.cfg[self.arch]['checkpoint']
-        checkpoint = torch.load(checkpoint, map_location=lambda storage, loc: storage)['state_dict']#['model']
-        ckpt = {}
-        for name, params in checkpoint.items():
-            ckpt[name.replace('model.', '')] = params
-        self.load_state_dict(ckpt, strict=False)
-
-    def __init__( self, config):
-        super(Net, self).__init__()
-        self.output_type = ['inference', 'loss']
-        self.cfg = config
-
-        self.rgb = RGB()
-        self.arch = 'swin_small_patch4_window7_224_22k'
-        
-        self.encoder = SwinTransformerV1(
-            ** {**config['basic']['swin'], **cfg[self.arch]['swin'],
-                **{'out_norm' : LayerNorm2d} }
-        )
-        encoder_dim =cfg[self.arch]['upernet']['in_channels']
-
-        self.decoder = UPerDecoder(
-            in_dim=encoder_dim,
-            ppm_pool_scale=[1, 2, 3, 6],
-            ppm_dim=512,
-            fpn_out_dim=256
-        )
-
-        self.logit = nn.Sequential(
-            nn.Conv2d(256, 1, kernel_size=1)
-        )
-        self.aux = nn.ModuleList([
-            nn.Conv2d(256, 1, kernel_size=1, padding=0) for i in range(4)
-        ])
-
-    def forward(self, batch):
-        x = batch['image']
-        x = self.rgb(x)
-        encoder = self.encoder(x)
-        last, decoder = self.decoder(encoder)
-        logit = self.logit(last)
-        logit = F.interpolate(logit, size=None, scale_factor=4, mode='bilinear', align_corners=False)
-
-        output = {}
-        if 'loss' in self.output_type:
-            output['bce_loss'] = F.binary_cross_entropy_with_logits(logit,batch['mask'])
-            for i in range(4):
-                output['aux%d_loss'%i] = criterion_aux_loss(self.aux[i](decoder[i]),batch['mask'])
-
-        if 'inference' in self.output_type:
-            output['probability'] = torch.sigmoid(logit)
-
-        return output
     
 class Mlp(nn.Module):
     """ Multilayer perceptron."""
