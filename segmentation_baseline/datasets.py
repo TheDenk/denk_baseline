@@ -161,7 +161,7 @@ class HubmapDataset(Dataset):
     def __getitem__(self, index):
         info = self.df.iloc[index]
         
-        if np.random.random() < 0.2:
+        if np.random.random() < 0.1:
             organ = info['organ']
             image, mask = self.get_mixup(self.df, organ)
         else:
@@ -175,7 +175,7 @@ class HubmapDataset(Dataset):
                 image = cv2.resize(image, dsize=None, fx=0.064, fy=0.064, interpolation=cv2.INTER_LINEAR)
                 image = cv2.resize(image, dsize=(img_w, img_h), interpolation=cv2.INTER_LINEAR)
             
-            if np.random.random() > 0.66:
+            if np.random.random() > 0.8:
                 normalizer = np.random.choice(self.normalizers) 
                 image, _, _ = normalizer.normalize(I=image, stains=True)
 

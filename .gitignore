@@ -169,6 +169,7 @@ patch_testing.ipynb
 full_testing.ipynb
 resize_testing.ipynb
 swin_transformer.ipynb
+pseudo_label.ipynb
 
 hubmap_config.yaml
 
