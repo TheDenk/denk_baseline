@@ -19,7 +19,7 @@ class DataModule(pl.LightningDataModule):
         return DataLoader(self.train, 
                           batch_size=self.config['common'].get('batch_size', 1),  
                           num_workers=self.config['common'].get('num_workers', 1),
-                          drop_last=self.config['common'].get('drop_last', True),
+                          drop_last=self.config['common'].get('drop_last', False),
                           pin_memory=self.config['common'].get('pin_memory', True),
                           shuffle=self.config['common'].get('shuffle', True),)
 

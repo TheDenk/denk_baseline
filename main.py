@@ -2,11 +2,10 @@ import os
 from argparse import ArgumentParser
 
 from omegaconf import OmegaConf
-from pytorch_lightning import Trainer, seed_everything
+from pytorch_lightning import seed_everything
 
-from segmentation_baseline.lightning_models import MulticlassModel, BinaryModel
 from segmentation_baseline.datamodules import DataModule
-from segmentation_baseline.utils import instantiate_from_config
+from segmentation_baseline.utils import instantiate_from_config, get_obj_from_str
 
 
 def parse_args():
@@ -39,7 +38,7 @@ def parse_loggers(config):
                 'version': config['common'].get('exp_name', 'exp0'),
                 'save_dir': 'output',
             }
-        elif 'WandbLogger'  in str_logger['target']:
+        elif 'WandbLogger' in str_logger['target']:
             str_logger['params'] = {
                 **params,
                 'name': config['common'].get('exp_name', 'exp0'),
@@ -61,14 +60,9 @@ if __name__ == '__main__':
     seed_everything(config['common']['seed'], workers=True)
 
     datamodule = DataModule(config)
-    model = BinaryModel(config) if config['common']['task'] == 'binary' else MulticlassModel(config) 
+    model = get_obj_from_str(config['lightning_model'])(config)
 
-    trainer = Trainer(
-        max_epochs=config['common']['epochs'], 
-        gpus=config['common']['gpus'],
-        logger=parse_loggers(config),
-        strategy='dp',
-        precision='bf16',
-        )
+    logger = parse_loggers(config)
+    trainer = get_obj_from_str(config['trainer']['target'])(logger=logger, **config['trainer']['params'])
 
     trainer.fit(model, datamodule) 

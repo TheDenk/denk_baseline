@@ -1,11 +1,15 @@
 common:
-  gpus:
-  - 0
-  task: 'multiclass'
   seed: 17
   batch_size: 32
   num_workers: 8
-  epochs: 32
+
+lightning_model: segmentation_baseline.lightning_models.MulticlassModel
+
+trainer:
+  target: pytorch_lightning.Trainer
+  params:
+    gpus: [0]
+    max_epochs: 32
 
 model:
   target: segmentation_models_pytorch.Unet

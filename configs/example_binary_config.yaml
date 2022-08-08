@@ -1,11 +1,15 @@
 common:
-  gpus:
-  - 0
-  task: 'binary'
   seed: 17
   batch_size: 32
   num_workers: 8
-  epochs: 128
+
+lightning_model: segmentation_baseline.lightning_models.BinaryModel
+
+trainer:
+  target: pytorch_lightning.Trainer
+  params:
+    gpus: [0]
+    max_epochs: 32
 
 model:
   target: segmentation_models_pytorch.Unet
