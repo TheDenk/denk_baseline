@@ -1,4 +1,7 @@
 common:
+  exp_name: test_exp
+  project_name: test_proj
+  save_dir: output
   seed: 17
   batch_size: 32
   num_workers: 8
@@ -34,7 +37,6 @@ metrics:
   name: iou
 
 callbacks:
-- target: pytorch_lightning.callbacks.LearningRateMonitor
 - target: pytorch_lightning.callbacks.ModelCheckpoint
   params:
     filename: best-{epoch:02d}-{iou_valid:2.2f}
@@ -50,12 +52,14 @@ datasets:
     params:
       img_h: 256
       img_w: 256
-      images_dir: path_to_images
-      masks_dir: path_to_masks
+      img_format: jpg # png, tiff ...
+      images_dir: path_to_train_images
+      masks_dir: path_to_train_masks
   valid:
     target: segmentation_baseline.datasets.BinaryDataset
     params:
       img_h: 256
       img_w: 256
-      images_dir: path_to_images
-      masks_dir: path_to_masks
+      img_format: jpg
+      images_dir: path_to_valid_images
+      masks_dir: path_to_valid_masks
