@@ -460,22 +460,20 @@ class SegformerDecoder(nn.Module):
         x = self.fuse(torch.cat(out, dim = 1))
         return x, out
 
-cfg = dict(
-    mit_b1 = dict(
-        checkpoint = './weights/segformer.b1.1024x1024.city.160k.pth',
-        builder  =  mit_b1,
-    ),
-    mit_b2 = dict(
-        checkpoint = './weights/segformer.b2.1024x1024.city.160k.pth',
-        builder  =  mit_b2,
-    ),
-
-)
+cfg = {
+    'mit_b1': {
+        'checkpoint': './weights/segformer.b1.1024x1024.city.160k.pth',
+        'builder':  mit_b1,
+    },
+    'mit_b2':{
+        'checkpoint': './weights/segformer.b2.1024x1024.city.160k.pth',
+        'builder':  mit_b2,
+    },
+}
 
 class SegFormer(nn.Module):
     def load_pretrain(self):
-        checkpoint = self.config[self.arch]['checkpoint']
-        print('load %s'%checkpoint)
+        checkpoint = cfg[self.arch]['checkpoint']
         checkpoint = torch.load(checkpoint, map_location='cpu')
         
         state_dict = {}
@@ -484,15 +482,11 @@ class SegFormer(nn.Module):
             
         print(self.encoder.load_state_dict(state_dict, strict=False))
 
-
-    def __init__(self, config):
+    def __init__(self, arch):
         super(SegFormer, self).__init__()
-        self.output_type = ['inference', 'loss']
         self.dropout = nn.Dropout(0.1)
-        self.config = config
-
-        self.arch = 'mit_b2'
-        self.encoder = config[self.arch]['builder']()
+        self.arch = arch
+        self.encoder = cfg[arch]['builder']()
         encoder_dim = self.encoder.embed_dims
 
         self.decoder = SegformerDecoder(
@@ -506,28 +500,14 @@ class SegFormer(nn.Module):
             nn.Conv2d(encoder_dim[i], 1, kernel_size=1, padding=0) for i in range(4)
         ])
 
-
-    def forward(self, batch):
-        x = batch['image']
-
-        B,C,H,W = x.shape
+    def forward(self, x):
         encoder = self.encoder(x)
-        
         last, decoder = self.decoder(encoder)
         last  = self.dropout(last)
         logit = self.logit(last)
         logit = F.interpolate(logit, size=None, scale_factor=4, mode='bilinear', align_corners=False)
+        return logit
 
-        output = {}
-        if 'loss' in self.output_type:
-            output['bce_loss'] = F.binary_cross_entropy_with_logits(logit, batch['mask'])
-            for i in range(4):
-                output['aux%d_loss'%i] = criterion_aux_loss(self.aux[i](encoder[i]),batch['mask'])
-
-        if 'inference' in self.output_type:
-            output['probability'] = torch.sigmoid(logit)
-
-        return output
 
 def criterion_aux_loss(logit, mask):
     mask = F.interpolate(mask,size=logit.shape[-2:], mode='nearest')
