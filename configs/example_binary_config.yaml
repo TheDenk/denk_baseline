@@ -6,7 +6,7 @@ common:
   batch_size: 32
   num_workers: 8
 
-lightning_model: segmentation_baseline.lightning_models.BinaryModel
+lightning_model: segmentation_baseline.lightning_models.SegmentationBinaryModel
 
 trainer:
   target: pytorch_lightning.Trainer
@@ -48,7 +48,7 @@ callbacks:
 
 datasets:
   train:
-    target: segmentation_baseline.datasets.BinaryDataset
+    target: segmentation_baseline.datasets.SegmentationBinaryDataset
     params:
       img_h: 256
       img_w: 256
@@ -56,7 +56,7 @@ datasets:
       images_dir: path_to_train_images
       masks_dir: path_to_train_masks
   valid:
-    target: segmentation_baseline.datasets.BinaryDataset
+    target: segmentation_baseline.datasets.SegmentationBinaryDataset
     params:
       img_h: 256
       img_w: 256
