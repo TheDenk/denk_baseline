@@ -184,3 +184,27 @@ class ClassificationBinaryModel(BaseModel):
         return {
             'loss': loss,
         }
+
+
+class ClassificationMulticlassModel(BaseModel):
+    def __init__(self, config):
+        super().__init__(config)
+
+    def _common_step(self, batch, batch_idx, stage):
+        gt_img, gt_label, oh_label = batch['image'], batch['label'].long(), batch['oh_label'].long()
+        pr_label = self.model(gt_img.contiguous()).float()
+        
+        loss = 0
+        for c_name in self.criterions.keys():
+            c_loss = self.criterions[c_name](pr_label, gt_label) * self.crit_weights[c_name]
+            self.log(f"{c_name}_loss_{stage}", c_loss, on_epoch=True, prog_bar=True)
+            loss += c_loss
+        self.log(f"total_loss_{stage}", loss, on_step=False, on_epoch=True, prog_bar=True)
+        # print('-'*50, pr_label.device, gt_label.device)
+        for m_name in self.metrics.keys():
+            metric_info = f"{m_name}_{stage}"
+            metric_value = self.metrics[m_name](pr_label.cpu(), oh_label.cpu())
+            self.log(metric_info, metric_value, on_step=False, on_epoch=True, prog_bar=True)              
+        return {
+            'loss': loss,
+        }

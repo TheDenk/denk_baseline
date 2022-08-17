@@ -373,3 +373,37 @@ class ClassificationBinaryDataset(Dataset):
             'image': image, 
             'label': self.df.iloc[index]['num_label'],
         }
+
+
+class ClassificationMulticlassDataset(Dataset):
+    def __init__(self, csv_path, images_dir, stage, img_w=None, img_h=None, augs=None):
+        self.df = pd.read_csv(csv_path)
+        self.images_dir = images_dir
+        self.img_w = img_w
+        self.img_h = img_h
+        self.augs = augs
+        self.stage = stage
+        
+    def __len__(self):
+        return self.df.shape[0]
+
+    def __getitem__(self, index):
+        img_name = self.df.iloc[index]['image_id']
+        img_path = os.path.join(self.images_dir, f'{img_name}.jpg')
+
+        image = cv2.imread(img_path)
+
+        if self.augs is not None:
+            image = self.augs(image=image)['image']
+            
+        mean = np.array([0.485, 0.456, 0.406]) 
+        std = np.array([0.229, 0.224, 0.225])
+
+        image = preprocess_image(image, img_w=self.img_w, img_h=self.img_h, mean=mean, std=std)
+        label = self.df.iloc[index]['num_label']
+
+        return {
+            'image': image, 
+            'label': label,
+            'oh_label': np.array([0, 1]) if label else np.array([1, 0]) 
+        }
