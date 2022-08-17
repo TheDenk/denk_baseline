@@ -3,9 +3,12 @@ import os
 import cv2
 import numpy as np
 import pandas as pd
+from PIL import Image
+Image.MAX_IMAGE_PIXELS = None
+
 from torch.utils.data import Dataset
 
-from .utils import preprocess_image, preprocess_mask2onehot, preprocess_single_mask, get_img_names, rle2mask
+from .utils import preprocess_image, preprocess_mask2onehot, preprocess_single_mask, get_img_names, rle2mask, resize_if_need_up, resize_if_need_down
 
 
 class SegmentationMulticlassDataset(Dataset):
@@ -313,36 +316,60 @@ class HubmapDatasetFromRLE(Dataset):
         }
 
 
+def prune_image(im, mask, thr=0.990):
+    for l in reversed(range(im.shape[1])):
+        if (np.sum(mask[:, l]) / float(mask.shape[0])) > thr:
+            im = np.delete(im, l, 1)
+    for l in reversed(range(im.shape[0])):
+        if (np.sum(mask[l, :]) / float(mask.shape[1])) > thr:
+            im = np.delete(im, l, 0)
+    return im
+
+
+def mask_median(im, val=255):
+    masks = [None] * 3
+    for c in range(3):
+        masks[c] = im[..., c] >= np.median(im[:, :, c]) - 5
+    mask = np.logical_and(*masks)
+    im[mask, :] = val
+    return im, mask
+
 class ClassificationBinaryDataset(Dataset):
-    def __init__(self, images_dir, masks_dir, labels=None, img_w=None, img_h=None, augs=None, img_format='png'):
-        self.img_names = get_img_names(images_dir, img_format=img_format)
+    def __init__(self, csv_path, images_dir, stage, img_w=None, img_h=None, augs=None):
+        self.df = pd.read_csv(csv_path)
         self.images_dir = images_dir
-        self.masks_dir = masks_dir
-        self.labels = labels if labels else [0, 1]
         self.img_w = img_w
         self.img_h = img_h
         self.augs = augs
+        self.stage = stage
         
     def __len__(self):
-        return len(self.img_names)
+        return self.df.shape[0]
 
     def __getitem__(self, index):
-        img_name = self.img_names[index]
-        img_path = os.path.join(self.images_dir, img_name)
-        msk_path = os.path.join(self.masks_dir, img_name)
+        img_name = self.df.iloc[index]['image_id']
+        img_path = os.path.join(self.images_dir, f'{img_name}.jpg')
 
         image = cv2.imread(img_path)
-        mask = cv2.imread(msk_path, 0)
+        # image = Image.open(img_path)
+        # image.thumbnail((self.img_w, self.img_h))
+        # image = np.array(image)
+
+        # image, mask = mask_median(image)
+        # image = prune_image(image, mask)
+
+        # image = resize_if_need_up(image, max_h=self.min_img_h, max_w=self.min_img_w, interpolation=cv2.INTER_LINEAR)
+        # image = resize_if_need_down(image, self.img_h, self.img_w, interpolation=cv2.INTER_AREA)
 
         if self.augs is not None:
-            item = self.augs(image=image, mask=mask)
-            image = item['image']
-            mask = item['mask']
+            image = self.augs(image=image)['image']
+            
+        mean = np.array([0.485, 0.456, 0.406]) 
+        std = np.array([0.229, 0.224, 0.225])
 
-        image = preprocess_image(image, img_w=self.img_w, img_h=self.img_h)
-        mask = preprocess_single_mask(mask, self.labels, img_w=self.img_w, img_h=self.img_h)
+        image = preprocess_image(image, img_w=self.img_w, img_h=self.img_h, mean=mean, std=std)
         
         return {
             'image': image, 
-            'mask': mask.unsqueeze(0),
+            'label': self.df.iloc[index]['num_label'],
         }
