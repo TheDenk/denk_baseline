@@ -11,8 +11,6 @@ import torch.nn.functional as F
 from functools import partial
 
 from timm.models.layers import DropPath, to_2tuple, trunc_normal_
-from timm.models.registry import register_model
-from timm.models.vision_transformer import _cfg
 
 import math
 
@@ -502,7 +500,7 @@ class SegFormer(nn.Module):
 
     def forward(self, x):
         encoder = self.encoder(x)
-        last, decoder = self.decoder(encoder)
+        last, _ = self.decoder(encoder)
         last  = self.dropout(last)
         logit = self.logit(last)
         logit = F.interpolate(logit, size=None, scale_factor=4, mode='bilinear', align_corners=False)
