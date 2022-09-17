@@ -1,8 +1,8 @@
-## SEGMENTATION BASELINE
+## DENK BASELINE
   
 Common scripts for fast neural network training for the task of binary and multiclass semantic segmentation. 
 
-This repo combines approaches of <a href="https://github.com/Lightning-AI/lightning">PytorchLightning</a> and <a href="https://github.com/qubvel/segmentation_models.pytorch">Segmentation Models Pytorch</a> for models training.  
+This repo combines approaches of <a href="https://github.com/Lightning-AI/lightning">PytorchLightning</a> with models from <a href="https://github.com/qubvel/segmentation_models.pytorch">Segmentation Models Pytorch</a> <a href="https://github.com/rwightman/pytorch-image-models">timm</a>.  
 
 Initially trained models and logs are saved in ```./output/project folder/experiment name``` 
 
@@ -10,8 +10,8 @@ Initially trained models and logs are saved in ```./output/project folder/experi
 
 #### 1. Clone repo
 ```python
-git clone https://github.com/TheDenk/segmentation_baseline.git
-cd segmentation_baseline
+git clone https://github.com/TheDenk/denk_baseline.git
+cd denk_baseline
 ```
 
 #### 2. Install requirements

@@ -1,11 +1,15 @@
+import sys
+sys.path.append('./repositories/pytorch-image-models')
+sys.path.append('./repositories/segmentation_models.pytorch')
+
 import os
 from argparse import ArgumentParser
 
 from omegaconf import OmegaConf
 from pytorch_lightning import seed_everything
 
-from segmentation_baseline.datamodules import DataModule
-from segmentation_baseline.utils import instantiate_from_config, get_obj_from_str
+from denk_baseline.datamodules import DataModule
+from denk_baseline.utils import instantiate_from_config, get_obj_from_str
 
 
 def parse_args():
