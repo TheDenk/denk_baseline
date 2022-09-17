@@ -2,7 +2,7 @@
   
 Common scripts for fast neural network training for the task of binary and multiclass semantic segmentation. 
 
-This repo combines approaches of <a href="https://github.com/Lightning-AI/lightning">PytorchLightning</a> with models from <a href="https://github.com/qubvel/segmentation_models.pytorch">Segmentation Models Pytorch</a> <a href="https://github.com/rwightman/pytorch-image-models">timm</a>.  
+This repo combines approaches of <a href="https://github.com/Lightning-AI/lightning">PytorchLightning</a> with models from <a href="https://github.com/qubvel/segmentation_models.pytorch">Segmentation Models Pytorch</a> and <a href="https://github.com/rwightman/pytorch-image-models">timm</a>.  
 
 Initially trained models and logs are saved in ```./output/project folder/experiment name``` 
 
