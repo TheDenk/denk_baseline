@@ -1,10 +1,10 @@
 ## DENK BASELINE
   
-Common scripts for fast neural network training for the task of binary and multiclass semantic segmentation. 
+Common scripts for fast neural network training for the tasks of semantic segmentation and classification. 
 
 This repo combines approaches of <a href="https://github.com/Lightning-AI/lightning">PytorchLightning</a> with models from <a href="https://github.com/qubvel/segmentation_models.pytorch">Segmentation Models Pytorch</a> and <a href="https://github.com/rwightman/pytorch-image-models">timm</a>.  
 
-Initially trained models and logs are saved in ```./output/project folder/experiment name``` 
+Initially trained models and logs are saved in ```./output/<project folder>/<experiment name>``` 
 
 ### Basic usage
 
@@ -36,7 +36,7 @@ Multiclass segmentation task:
 python main.py --config ./configs/example_multiclass_config.yaml
 ```
   
-##### Watch tensorboard
+##### Watch tensorboard (if available)
 
 ```pyhton
 tensorboard --logdir=output/
