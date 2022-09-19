@@ -335,20 +335,22 @@ def mask_median(im, val=255):
     return im, mask
 
 class ClassificationBinaryDataset(Dataset):
-    def __init__(self, csv_path, images_dir, stage, img_w=None, img_h=None, augs=None):
+    def __init__(self, csv_path, images_dir, stage, img_w=None, img_h=None, augs=None, img_format='jpg'):
         self.df = pd.read_csv(csv_path)
         self.images_dir = images_dir
         self.img_w = img_w
         self.img_h = img_h
         self.augs = augs
         self.stage = stage
+        self.img_format = img_format
         
     def __len__(self):
         return self.df.shape[0]
 
     def __getitem__(self, index):
         img_name = self.df.iloc[index]['image_id']
-        img_path = os.path.join(self.images_dir, f'{img_name}.jpg')
+        img_name = f'{img_name}.{self.img_format }' if self.img_format is not None else img_name
+        img_path = os.path.join(self.images_dir, img_name)
 
         image = cv2.imread(img_path)
         # image = Image.open(img_path)
@@ -376,21 +378,22 @@ class ClassificationBinaryDataset(Dataset):
 
 
 class ClassificationMulticlassDataset(Dataset):
-    def __init__(self, csv_path, images_dir, stage, img_w=None, img_h=None, augs=None):
+    def __init__(self, csv_path, images_dir, stage, img_w=None, img_h=None, augs=None, img_format='jpg'):
         self.df = pd.read_csv(csv_path)
         self.images_dir = images_dir
         self.img_w = img_w
         self.img_h = img_h
         self.augs = augs
         self.stage = stage
+        self.img_format = img_format
         
     def __len__(self):
         return self.df.shape[0]
 
     def __getitem__(self, index):
         img_name = self.df.iloc[index]['image_id']
-        img_path = os.path.join(self.images_dir, f'{img_name}.jpg')
-
+        img_name = f'{img_name}.{self.img_format }' if self.img_format is not None else img_name
+        img_path = os.path.join(self.images_dir, img_name)
         image = cv2.imread(img_path)
 
         if self.augs is not None:

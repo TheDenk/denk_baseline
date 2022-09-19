@@ -137,31 +137,6 @@ class SegmentationBinaryModel(BaseModel):
             'loss': loss,
         }
 
-
-class SegmentationBinaryModel(BaseModel):
-    def __init__(self, config):
-        super().__init__(config)
-
-    def _common_step(self, batch, batch_idx, stage):
-        gt_img, gt_mask = batch['image'], batch['mask'].float()
-        pr_mask = self.model(gt_img.contiguous()).float()
-        
-        loss = 0
-        for c_name in self.criterions.keys():
-            c_loss = self.criterions[c_name](pr_mask, gt_mask) * self.crit_weights[c_name]
-            self.log(f"{c_name}_loss_{stage}", c_loss, on_epoch=True, prog_bar=True)
-            loss += c_loss
-        self.log(f"total_loss_{stage}", loss, on_step=False, on_epoch=True, prog_bar=True)
-
-        for m_name in self.metrics.keys():
-            metric_info = f"{m_name}_{stage}"
-            metric_value = self.metrics[m_name](pr_mask, gt_mask)
-            self.log(metric_info, metric_value, on_step=False, on_epoch=True, prog_bar=True)              
-        return {
-            'loss': loss,
-        }
-
-
 class ClassificationBinaryModel(BaseModel):
     def __init__(self, config):
         super().__init__(config)
