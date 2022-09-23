@@ -370,10 +370,11 @@ class ClassificationBinaryDataset(Dataset):
         std = np.array([0.229, 0.224, 0.225])
 
         image = preprocess_image(image, img_w=self.img_w, img_h=self.img_h, mean=mean, std=std)
-        
+        # label = 0.99 if self.df.iloc[index]['num_label'] else 0.0
+        label = self.df.iloc[index]['num_label']
         return {
             'image': image, 
-            'label': self.df.iloc[index]['num_label'],
+            'label': label,
         }
 
 

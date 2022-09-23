@@ -144,7 +144,7 @@ class ClassificationBinaryModel(BaseModel):
     def _common_step(self, batch, batch_idx, stage):
         gt_img, gt_label = batch['image'], batch['label'].float().unsqueeze(1)
         pr_label = self.model(gt_img.contiguous()).float()
-        
+
         loss = 0
         for c_name in self.criterions.keys():
             c_loss = self.criterions[c_name](pr_label, gt_label) * self.crit_weights[c_name]
