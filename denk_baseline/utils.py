@@ -15,6 +15,10 @@ def get_img_names(folder, img_format='png'):
     return img_names
 
 def preprocess_image(image, img_w=None, img_h=None, interpolation=cv2.INTER_LINEAR, mean=np.array([0, 0, 0]), std=np.array([1, 1, 1])):
+    '''
+    mean=[0., 0., 0.], std=[1., 1., 1.]
+    mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
+    '''
     img = image.copy()
     if img_w and img_h:
         img = cv2.resize(img, (img_w, img_h), interpolation=interpolation)
@@ -23,6 +27,17 @@ def preprocess_image(image, img_w=None, img_h=None, interpolation=cv2.INTER_LINE
     img = torch.from_numpy(img).permute(2, 0, 1)
     return img
 
+def process_img2np(image, mean=np.array([0, 0, 0]), std=np.array([1, 1, 1])):
+    '''
+    mean=[0., 0., 0.], std=[1., 1., 1.]
+    mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
+    '''
+    img = image.cpu().clone()
+    img = img.permute(1, 2, 0).numpy()
+    img = (img*std + mean) * 255
+    img = np.clip(img, 0, 255).astype(np.uint8)
+    return img
+    
 def preprocess_mask2onehot(image, labels, img_w=None, img_h=None, interpolation=cv2.INTER_LINEAR):
     input_img = image.copy()
     if img_w and img_h:
@@ -39,13 +54,6 @@ def preprocess_single_mask(image, labels, img_w=None, img_h=None, interpolation=
     for index, label in enumerate(labels):
         img[img == label] = index
     img = torch.from_numpy(img)
-    return img
-
-def process_img2np(image, mean=np.array([0, 0, 0]), std=np.array([1, 1, 1])):
-    img = image.cpu().clone()
-    img = img.permute(1, 2, 0).numpy()
-    img = (img*std + mean) * 255
-    img = np.clip(img, 0, 255).astype(np.uint8)
     return img
 
 def process_multimask2np(image, labels):
@@ -114,17 +122,6 @@ def inverse_normalize_tensor(tensor, mean, std):
     for t, m, s in zip(tensor, mean, std):
         t.mul_(s).add_(m)
     return tensor
-
-def normalized_image_to_numpy(image, mean=np.array([0, 0, 0]), std=np.array([1, 1, 1])):
-    '''
-    mean=[0., 0., 0.], std=[1., 1., 1.]
-    mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
-    '''
-    img = image.cpu()
-    img = img.permute(1, 2, 0).numpy()
-    img = (img * std + mean) * 255
-    img = np.clip(img, 0, 255).astype(np.uint8)
-    return img
 
 def make_img_padding(image, max_h, max_w):
     img = image.copy()

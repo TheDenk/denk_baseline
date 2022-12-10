@@ -416,9 +416,11 @@ class ClassificationMulticlassDataset(Dataset):
             'oh_label': np.array([0, 1]) if label else np.array([1, 0]) 
         }
     
+
 class RSNADataset(Dataset):
-    def __init__(self, csv_path, img_w=None, img_h=None, augs=None):
+    def __init__(self, csv_path, images_dir, img_w=None, img_h=None, augs=None):
         self.df = pd.read_csv(csv_path)
+        self.images_dir = images_dir
         self.img_w = img_w
         self.img_h = img_h
         self.augs = augs
@@ -427,25 +429,56 @@ class RSNADataset(Dataset):
         return self.df.shape[0]
 
     def __getitem__(self, index):
-        dcm_path = self.df.iloc[index]['dcm_path']
-        dcm_raw = pydicom.dcmread(dcm_path)
-        dcm_image = apply_voi_lut(dcm_raw.pixel_array, dcm_raw)
+        img_id = self.df.iloc[index]['image_id']
+        patient_id = self.df.iloc[index]['patient_id']
+        img_path = os.path.join(self.images_dir, f'{patient_id}', f'{img_id}.png')
+        print(img_path)
         
-        image = dcm_image - dcm_image.min()
-        image /= image.max()
-        image *= 255
-        image = image.astype(np.uint8)
-
+        image = cv2.imread(img_path)
+        
         if self.augs is not None:
             image = self.augs(image=image)['image']
-            
+        
         mean = np.array([0.485, 0.456, 0.406]) 
         std = np.array([0.229, 0.224, 0.225])
-
         image = preprocess_image(image, img_w=self.img_w, img_h=self.img_h, mean=mean, std=std)
-        labels = self.df.iloc[index][[f'N{x}' for x in range(1, 9)]]
-
+        
         return {
             'image': image, 
-            'labels': labels.values.astype(np.int32),
+            'label': self.df.iloc[index]['cancer'],
         }
+
+# class RSNADataset(Dataset):
+#     def __init__(self, csv_path, img_w=None, img_h=None, augs=None):
+#         self.df = pd.read_csv(csv_path)
+#         self.img_w = img_w
+#         self.img_h = img_h
+#         self.augs = augs
+        
+#     def __len__(self):
+#         return self.df.shape[0]
+
+#     def __getitem__(self, index):
+#         dcm_path = self.df.iloc[index]['dcm_path']
+#         dcm_raw = pydicom.dcmread(dcm_path)
+#         dcm_image = apply_voi_lut(dcm_raw.pixel_array, dcm_raw)
+        
+#         image = dcm_image - dcm_image.min()
+#         image /= image.max()
+#         image *= 255
+#         image = image.astype(np.uint8)
+
+#         if self.augs is not None:
+#             image = self.augs(image=image)['image']
+            
+#         mean = np.array([0.485, 0.456, 0.406]) 
+#         std = np.array([0.229, 0.224, 0.225])
+
+#         image = preprocess_image(image, img_w=self.img_w, img_h=self.img_h, mean=mean, std=std)
+#         labels = self.df.iloc[index][[f'N{x}' for x in range(1, 9)]]
+
+#         return {
+#             'image': image, 
+#             'labels': labels.values.astype(np.int32),
+#         }
+
