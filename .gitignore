@@ -172,6 +172,7 @@ swin_transformer.ipynb
 pseudo_label.ipynb
 
 hubmap_config.yaml
+rsna_config.yaml
 
 mix_mark.csv
 segformer_fold_0.ipynb

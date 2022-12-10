@@ -102,7 +102,7 @@ def rle2mask(mask_rle, shape):
     ends = starts + lengths
     img = np.zeros(shape[0] * shape[1], dtype=np.uint8)
     for lo, hi in zip(starts, ends):
-        img[lo : hi] = 1
+        img[lo : hi] = 1 
     return img.reshape(shape).T
 
 def load_json(file_path):
@@ -110,18 +110,19 @@ def load_json(file_path):
         data = json.load(file)
     return data
 
-def inverse_normalize(tensor, mean, std):
+def inverse_normalize_tensor(tensor, mean, std):
     for t, m, s in zip(tensor, mean, std):
         t.mul_(s).add_(m)
     return tensor
 
 def normalized_image_to_numpy(image, mean=np.array([0, 0, 0]), std=np.array([1, 1, 1])):
     '''
+    mean=[0., 0., 0.], std=[1., 1., 1.]
     mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
     '''
     img = image.cpu()
-    img = inverse_normalize(img, mean=mean, std=std)
-    img = img.permute(1, 2, 0).numpy()*255
+    img = img.permute(1, 2, 0).numpy()
+    img = (img * std + mean) * 255
     img = np.clip(img, 0, 255).astype(np.uint8)
     return img
 
