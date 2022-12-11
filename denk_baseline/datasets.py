@@ -429,10 +429,9 @@ class RSNADataset(Dataset):
         return self.df.shape[0]
 
     def __getitem__(self, index):
-        img_id = self.df.iloc[index]['image_id']
-        patient_id = self.df.iloc[index]['patient_id']
+        img_id = int(self.df.iloc[index]['image_id'])
+        patient_id = int(self.df.iloc[index]['patient_id'])
         img_path = os.path.join(self.images_dir, f'{patient_id}', f'{img_id}.png')
-        print(img_path)
         
         image = cv2.imread(img_path)
         

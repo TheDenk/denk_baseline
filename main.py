@@ -24,10 +24,42 @@ def save_config(config):
         OmegaConf.save(config=config, f=file)
 
 def preprocess_config(config):
+    # Right exp dir
     exp_name = config['common'].get('exp_name', 'exp0')
     project_name = config['common'].get('project_name', 'proj0')
     save_dir = config['common'].get('save_dir', 'output')
     config['common']['save_path'] = os.path.join(save_dir, project_name, exp_name)
+
+    # Common params
+    # MAX EPOCH
+    max_epoch = config['common'].get('max_epoch', False)
+    if max_epoch:
+        config['trainer']['params']['max_epoch'] = max_epoch
+        
+        for opt_index, _ in enumerate(config['optimizers']):
+            sch = config['optimizers'][opt_index].get('scheduler', False)
+            if  sch and 'LinearWarmupCosineAnnealingLR' in sch['target']:
+                config['optimizers'][opt_index]['scheduler']['params']['max_epoch'] = max_epoch
+
+    # IMG_SIZE
+    img_size = config['common'].get('img_size', False)
+    if img_size:
+        for stage in ['train', 'valid']:
+            for side in ['img_h', 'img_w']:
+                config['datasets'][stage]['params'][side] = img_size
+
+    # BATCH_SIZE
+    batch_size = config['common'].get('batch_size', False)
+    if img_size:
+        config['dataloaders']['train']['params']['batch_size'] = batch_size
+        config['dataloaders']['valid']['params']['batch_size'] = batch_size
+
+    # NUM_WORKERS
+    num_workers = config['common'].get('num_workers', False)
+    if img_size:
+        config['dataloaders']['train']['params']['num_workers'] = num_workers
+        config['dataloaders']['valid']['params']['num_workers'] = num_workers
+    
     return config
 
 def parse_loggers(config):

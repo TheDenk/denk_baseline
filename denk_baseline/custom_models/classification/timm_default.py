@@ -14,6 +14,4 @@ class TimmNet(nn.Module):
         )
     def forward(self, x):
         x = self.backbone(x)
-        # x = torch.sigmoid(x)
-        # x = (x > 0.5).float()
         return x

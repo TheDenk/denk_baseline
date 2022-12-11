@@ -1,4 +1,5 @@
 import torch
+import torch.nn.functional as F
 
 
 class DiceCoef:
@@ -19,14 +20,15 @@ class DiceCoef:
         return dice
 
 
-class PFScore:
+class PFScoreFromLogits:
     def __init__(self, beta):
         self.beta = beta
 
     def __call__(self, y_pred, y_true):
         return self.calculate(y_pred, y_true, self.beta)
 
-    def calculate(self, labels, predictions, beta):
+    def calculate(self, logits, labels, beta):
+        predictions = F.sigmoid(logits)
         y_true_count = 0
         ctp = 0
         cfp = 0
@@ -41,7 +43,7 @@ class PFScore:
 
         beta_squared = beta * beta
         c_precision = ctp / (ctp + cfp)
-        c_recall = ctp / y_true_count
+        c_recall = ctp / (y_true_count + 0.00001)
         if (c_precision > 0 and c_recall > 0):
             result = (1 + beta_squared) * (c_precision * c_recall) / (beta_squared * c_precision + c_recall)
             return result
