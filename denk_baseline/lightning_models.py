@@ -18,6 +18,8 @@ class BaseModel(pl.LightningModule):
         
         self.metrics = {x['name']: instantiate_from_config(x) for x in config['metrics']}
 
+        self.save_hyperparameters()
+
     def forward(self, x):
         return self.model(x)
     
