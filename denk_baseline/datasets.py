@@ -418,14 +418,14 @@ class ClassificationMulticlassDataset(Dataset):
     
 
 class RSNADataset(Dataset):
-    def __init__(self, df, images_dir, img_w=None, img_h=None, augs=None, mixup_proba=0.2):
-        self.df = df
+    def __init__(self, csv_path, images_dir, img_w=None, img_h=None, augs=None, mixup_proba=0.0):
+        self.df = pd.read_csv(csv_path)
         self.images_dir = images_dir
         self.img_w = img_w
         self.img_h = img_h
         self.augs = augs
         
-        self.canser_ids = df[df.cancer == 1].index
+        self.canser_ids = self.df[self.df.cancer == 1].index
         self.mixup_proba = mixup_proba
 
     def __len__(self):
