@@ -82,11 +82,11 @@ def parse_loggers(config):
                 'save_dir': 'output',
             }
 
-            import wandb
-            with wandb.init(project=config['common']['project_name']) as r:
-                artifact = wandb.Artifact('config', type='dataset')
-                artifact.add_file(f"{config['common']['save_path']}/config.yaml")
-                wandb.log_artifact(artifact)
+            # import wandb
+            # with wandb.init(project=config['common']['project_name']) as r:
+            #     artifact = wandb.Artifact('config', type='dataset')
+            #     artifact.add_file(f"{config['common']['save_path']}/config.yaml")
+            #     wandb.log_artifact(artifact)
 
         logger = instantiate_from_config(str_logger)
         loggers.append(logger)

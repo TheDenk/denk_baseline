@@ -418,19 +418,22 @@ class ClassificationMulticlassDataset(Dataset):
     
 
 class RSNADataset(Dataset):
-    def __init__(self, csv_path, images_dir, img_w=None, img_h=None, augs=None):
-        self.df = pd.read_csv(csv_path)
+    def __init__(self, df, images_dir, img_w=None, img_h=None, augs=None, mixup_proba=0.2):
+        self.df = df
         self.images_dir = images_dir
         self.img_w = img_w
         self.img_h = img_h
         self.augs = augs
         
+        self.canser_ids = df[df.cancer == 1].index
+        self.mixup_proba = mixup_proba
+
     def __len__(self):
         return self.df.shape[0]
-
-    def __getitem__(self, index):
-        img_id = int(self.df.iloc[index]['image_id'])
-        patient_id = int(self.df.iloc[index]['patient_id'])
+    
+    def get_item(self, index):
+        img_id = self.df.iloc[index]['image_id']
+        patient_id = self.df.iloc[index]['patient_id']
         img_path = os.path.join(self.images_dir, f'{patient_id}', f'{img_id}.png')
         
         image = cv2.imread(img_path)
@@ -438,13 +441,31 @@ class RSNADataset(Dataset):
         if self.augs is not None:
             image = self.augs(image=image)['image']
         
+        label = self.df.iloc[index]['cancer']
+        
+        return image, label
+    
+    def __getitem__(self, index):
+        
+        image, label = self.get_item(index)
+        
+        if np.random.random() < self.mixup_proba:
+            c_index = np.random.randint(0, len(self.canser_ids))
+            s_id = self.canser_ids[c_index]
+            s_image, s_label = self.get_item(s_id)
+            
+            alpha = np.random.random()
+            beta = 1.0 - alpha
+            image = cv2.addWeighted(image, alpha, s_image, beta, 0.0)
+            label = label*alpha + s_label*beta
+        
         mean = np.array([0.485, 0.456, 0.406]) 
         std = np.array([0.229, 0.224, 0.225])
         image = preprocess_image(image, img_w=self.img_w, img_h=self.img_h, mean=mean, std=std)
         
         return {
             'image': image, 
-            'label': self.df.iloc[index]['cancer'],
+            'label': label,
         }
 
 # class RSNADataset(Dataset):

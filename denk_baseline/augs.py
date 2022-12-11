@@ -40,7 +40,7 @@ class CustomTrainAugs(BaseAugs):
 class ClassificationTrainAugs(BaseAugs):
     def get_augs(self):
         return A.Compose([
-            # A.ShiftScaleRotate(shift_limit=0.0625, scale_limit=0.2, rotate_limit=15, p=0.15, border_mode=cv2.BORDER_REFLECT),
+            A.ShiftScaleRotate(shift_limit=0.0625, scale_limit=0.2, rotate_limit=15, p=0.15, border_mode=cv2.BORDER_REFLECT),
             A.ToGray(p=0.15),
             A.HorizontalFlip(p=0.25),
             A.VerticalFlip(p=0.25),
