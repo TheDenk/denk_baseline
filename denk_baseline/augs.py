@@ -40,18 +40,18 @@ class CustomTrainAugs(BaseAugs):
 class ClassificationTrainAugs(BaseAugs):
     def get_augs(self):
         return A.Compose([
-            A.ShiftScaleRotate(shift_limit=0.0625, scale_limit=0.2, rotate_limit=15, p=0.15, border_mode=cv2.BORDER_REFLECT),
-            A.ToGray(p=0.15),
-            A.HorizontalFlip(p=0.25),
-            A.VerticalFlip(p=0.25),
-            A.RandomRotate90(p=0.25),
-            # A.HueSaturationValue(hue_shift_limit=30, sat_shift_limit=30, val_shift_limit=0, p=0.25),
-            A.RandomBrightnessContrast(brightness_limit=0.35, contrast_limit=0.5, brightness_by_max=True, p=0.25),
-            # A.Cutout (num_holes=5, max_h_size=32, max_w_size=32, fill_value=0, p=0.5),
+            A.ShiftScaleRotate(shift_limit=0.0625, scale_limit=0.2, rotate_limit=15, p=0.5, border_mode=cv2.BORDER_REFLECT),
+            A.ToGray(p=0.5),
+            A.HorizontalFlip(p=0.5),
+            A.VerticalFlip(p=0.5),
+            A.RandomRotate90(p=0.5),
+            A.HueSaturationValue(hue_shift_limit=30, sat_shift_limit=30, val_shift_limit=0, p=0.5),
+            A.RandomBrightnessContrast(brightness_limit=0.35, contrast_limit=0.5, brightness_by_max=True, p=0.5),
+            A.Cutout(num_holes=8, max_h_size=16, max_w_size=16, fill_value=0, p=0.5),
             A.OneOf([
                 # A.OpticalDistortion(p=0.5),
                 # A.GridDistortion(p=0.5),
                 A.GaussianBlur(p=1.0),
-            ], p=0.25),
+            ], p=0.5),
         ], p=0.95)
 

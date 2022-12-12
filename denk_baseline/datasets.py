@@ -13,6 +13,7 @@ import nibabel as nib
 from pydicom.pixel_data_handlers.util import apply_voi_lut
 
 from .utils import preprocess_image, preprocess_mask2onehot, preprocess_single_mask, get_img_names, rle2mask, resize_if_need_up, resize_if_need_down
+# from hengk_augs import train_augment_v00a, train_augment_v00
 
 
 class SegmentationMulticlassDataset(Dataset):
@@ -440,6 +441,7 @@ class RSNADataset(Dataset):
         
         if self.augs is not None:
             image = self.augs(image=image)['image']
+            
         
         label = self.df.iloc[index]['cancer']
         
@@ -449,15 +451,15 @@ class RSNADataset(Dataset):
         
         image, label = self.get_item(index)
         
-        if np.random.random() < self.mixup_proba:
-            c_index = np.random.randint(0, len(self.canser_ids))
-            s_id = self.canser_ids[c_index]
-            s_image, s_label = self.get_item(s_id)
+        # if np.random.random() < self.mixup_proba:
+        #     c_index = np.random.randint(0, len(self.canser_ids))
+        #     s_id = self.canser_ids[c_index]
+        #     s_image, s_label = self.get_item(s_id)
             
-            alpha = np.random.random()
-            beta = 1.0 - alpha
-            image = cv2.addWeighted(image, alpha, s_image, beta, 0.0)
-            label = label*alpha + s_label*beta
+        #     alpha = np.random.random()
+        #     beta = 1.0 - alpha
+        #     image = cv2.addWeighted(image, alpha, s_image, beta, 0.0)
+        #     label = label*alpha + s_label*beta
         
         mean = np.array([0.485, 0.456, 0.406]) 
         std = np.array([0.229, 0.224, 0.225])
