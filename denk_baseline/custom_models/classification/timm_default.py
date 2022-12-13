@@ -14,7 +14,7 @@ class TimmNet(nn.Module):
             pretrained=pretrained,
             global_pool=global_pool,
         )
-        self.cancer = nn.Linear(1280, 1)
+        self.cancer = nn.Linear(1408,1)
 
     def forward(self, x):
         x = self.backbone.forward_features(x)

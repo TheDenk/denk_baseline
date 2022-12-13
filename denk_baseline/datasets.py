@@ -433,23 +433,25 @@ class RSNADataset(Dataset):
         return self.df.shape[0]
 
     def img2roi(self, img):
-        bin_img = cv2.threshold(img, 20, 255, cv2.THRESH_BINARY)[1]
-        contours, _ = cv2.findContours(bin_img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        blur = cv2.GaussianBlur(gray, (5, 5), 0)
+        _, bin_img = cv2.threshold(blur, 0, 255,cv2.THRESH_BINARY+cv2.THRESH_OTSU)
+        contours, _ = cv2.findContours(bin_img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         contour = max(contours, key=cv2.contourArea)
 
         ys = contour.squeeze()[:, 0]
         xs = contour.squeeze()[:, 1]
         roi =  img[np.min(xs):np.max(xs), np.min(ys):np.max(ys)]
-        return roi
+        return cv2.resize(roi, (self.img_w, self.img_h))
     
     def get_item(self, index):
         img_id = self.df.iloc[index]['image_id']
         patient_id = self.df.iloc[index]['patient_id']
         img_path = os.path.join(self.images_dir, f'{patient_id}', f'{img_id}.png')
         
-        image = cv2.imread(img_path)
-        # image = self.img2roi(image)
-        
+        image = cv2.imread(img_path).astype(np.uint8)
+        image = self.img2roi(image)
+
         if self.augs is not None:
             image = self.augs(image=image)['image']
             
