@@ -431,6 +431,16 @@ class RSNADataset(Dataset):
 
     def __len__(self):
         return self.df.shape[0]
+
+    def img2roi(self, img):
+        bin_img = cv2.threshold(img, 20, 255, cv2.THRESH_BINARY)[1]
+        contours, _ = cv2.findContours(bin_img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+        contour = max(contours, key=cv2.contourArea)
+
+        ys = contour.squeeze()[:, 0]
+        xs = contour.squeeze()[:, 1]
+        roi =  img[np.min(xs):np.max(xs), np.min(ys):np.max(ys)]
+        return roi
     
     def get_item(self, index):
         img_id = self.df.iloc[index]['image_id']
@@ -438,11 +448,11 @@ class RSNADataset(Dataset):
         img_path = os.path.join(self.images_dir, f'{patient_id}', f'{img_id}.png')
         
         image = cv2.imread(img_path)
+        # image = self.img2roi(image)
         
         if self.augs is not None:
             image = self.augs(image=image)['image']
             
-        
         label = self.df.iloc[index]['cancer']
         
         return image, label
@@ -451,15 +461,15 @@ class RSNADataset(Dataset):
         
         image, label = self.get_item(index)
         
-        # if np.random.random() < self.mixup_proba:
-        #     c_index = np.random.randint(0, len(self.canser_ids))
-        #     s_id = self.canser_ids[c_index]
-        #     s_image, s_label = self.get_item(s_id)
+        if np.random.random() < self.mixup_proba:
+            c_index = np.random.randint(0, len(self.canser_ids))
+            s_id = self.canser_ids[c_index]
+            s_image, s_label = self.get_item(s_id)
             
-        #     alpha = np.random.random()
-        #     beta = 1.0 - alpha
-        #     image = cv2.addWeighted(image, alpha, s_image, beta, 0.0)
-        #     label = label*alpha + s_label*beta
+            alpha = max(min(np.random.random(), 0.2), 0.8)
+            beta = 1.0 - alpha
+            image = cv2.addWeighted(image, alpha, s_image, beta, 0.0)
+            label = label*alpha + s_label*beta
         
         mean = np.array([0.485, 0.456, 0.406]) 
         std = np.array([0.229, 0.224, 0.225])

@@ -156,7 +156,7 @@ class ClassificationBinaryModel(BaseModel):
         
         for m_name in self.metrics.keys():
             metric_info = f"{m_name}_{stage}"
-            metric_value = self.metrics[m_name](pr_label.cpu(), gt_label.long().cpu())
+            metric_value = self.metrics[m_name](pr_label.cpu().squeeze(), gt_label.cpu().long().squeeze())
             self.log(metric_info, metric_value, on_step=False, on_epoch=True, prog_bar=True)              
         return {
             'loss': loss,

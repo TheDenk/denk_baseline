@@ -19,7 +19,7 @@ class DataModule(pl.LightningDataModule):
     def train_dataloader(self):
         train_params = self.config['dataloaders']['train']['params']
         return DataLoader(self.train, 
-                          sampler=RSNABalanceSampler(self.train, ratio=8),
+                          sampler=RSNABalanceSampler(self.train, ratio=16),
                           batch_size=train_params.get('batch_size', 1),  
                           num_workers=train_params.get('num_workers', 1),
                           drop_last=train_params.get('drop_last', False),
