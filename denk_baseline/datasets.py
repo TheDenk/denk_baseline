@@ -419,15 +419,15 @@ class ClassificationMulticlassDataset(Dataset):
     
 
 class RSNADataset(Dataset):
-    def __init__(self, csv_path, images_dir, img_w=None, img_h=None, augs=None, mixup_proba=0.0):
-        self.df = pd.read_csv(csv_path)
+    def __init__(self, csv_path, images_dir, img_w=None, img_h=None, augs=None, mixup_proba=0.0, roi_proba=0.5):
+        self.df = pd.read_csv(csv_path).reset_index()
         self.images_dir = images_dir
         self.img_w = img_w
         self.img_h = img_h
         self.augs = augs
-        
         self.canser_ids = self.df[self.df.cancer == 1].index
         self.mixup_proba = mixup_proba
+        self.roi_proba = roi_proba
 
     def __len__(self):
         return self.df.shape[0]
@@ -435,10 +435,9 @@ class RSNADataset(Dataset):
     def img2roi(self, img):
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         blur = cv2.GaussianBlur(gray, (5, 5), 0)
-        _, bin_img = cv2.threshold(blur, 0, 255,cv2.THRESH_BINARY+cv2.THRESH_OTSU)
+        _, bin_img = cv2.threshold(blur, 0, 255,cv2.THRESH_BINARY)
         contours, _ = cv2.findContours(bin_img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         contour = max(contours, key=cv2.contourArea)
-
         ys = contour.squeeze()[:, 0]
         xs = contour.squeeze()[:, 1]
         roi =  img[np.min(xs):np.max(xs), np.min(ys):np.max(ys)]
@@ -450,7 +449,9 @@ class RSNADataset(Dataset):
         img_path = os.path.join(self.images_dir, f'{patient_id}', f'{img_id}.png')
         
         image = cv2.imread(img_path).astype(np.uint8)
-        image = self.img2roi(image)
+        
+        if np.random.random() < self.roi_proba:
+            image = self.img2roi(image)
 
         if self.augs is not None:
             image = self.augs(image=image)['image']
@@ -468,7 +469,7 @@ class RSNADataset(Dataset):
             s_id = self.canser_ids[c_index]
             s_image, s_label = self.get_item(s_id)
             
-            alpha = max(min(np.random.random(), 0.2), 0.8)
+            alpha = min(max(np.random.random(), 0.2), 0.8)
             beta = 1.0 - alpha
             image = cv2.addWeighted(image, alpha, s_image, beta, 0.0)
             label = label*alpha + s_label*beta
@@ -481,38 +482,4 @@ class RSNADataset(Dataset):
             'image': image, 
             'label': label,
         }
-
-# class RSNADataset(Dataset):
-#     def __init__(self, csv_path, img_w=None, img_h=None, augs=None):
-#         self.df = pd.read_csv(csv_path)
-#         self.img_w = img_w
-#         self.img_h = img_h
-#         self.augs = augs
-        
-#     def __len__(self):
-#         return self.df.shape[0]
-
-#     def __getitem__(self, index):
-#         dcm_path = self.df.iloc[index]['dcm_path']
-#         dcm_raw = pydicom.dcmread(dcm_path)
-#         dcm_image = apply_voi_lut(dcm_raw.pixel_array, dcm_raw)
-        
-#         image = dcm_image - dcm_image.min()
-#         image /= image.max()
-#         image *= 255
-#         image = image.astype(np.uint8)
-
-#         if self.augs is not None:
-#             image = self.augs(image=image)['image']
-            
-#         mean = np.array([0.485, 0.456, 0.406]) 
-#         std = np.array([0.229, 0.224, 0.225])
-
-#         image = preprocess_image(image, img_w=self.img_w, img_h=self.img_h, mean=mean, std=std)
-#         labels = self.df.iloc[index][[f'N{x}' for x in range(1, 9)]]
-
-#         return {
-#             'image': image, 
-#             'labels': labels.values.astype(np.int32),
-#         }
 
