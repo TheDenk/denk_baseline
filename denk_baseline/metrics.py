@@ -28,7 +28,7 @@ class PFScoreFromLogits:
         return self.calculate(y_pred, y_true, self.beta)
 
     def calculate(self, preds, labels, beta=1):
-        # preds = F.sigmoid(preds)
+        preds = F.sigmoid(preds)
         preds = preds.clip(0, 1)
         y_true_count = labels.sum()
         ctp = preds[labels==1].sum()

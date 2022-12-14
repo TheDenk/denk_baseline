@@ -14,17 +14,7 @@ class TimmNet(nn.Module):
             pretrained=pretrained,
             global_pool=global_pool,
         )
-        self.cancer = nn.Linear(1408,1)
 
     def forward(self, x):
-        x = self.backbone.forward_features(x)
-        x = F.adaptive_avg_pool2d(x, 1)
-        x = torch.flatten(x, 1, 3)
-        # print(x.shape)
-        x = self.cancer(x)
-        # x = x.reshape(-1)
-
-        x = F.sigmoid(x)
-        # x = torch.nan_to_num(x)
-
+        x = self.backbone(x)
         return x

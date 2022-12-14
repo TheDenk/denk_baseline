@@ -46,6 +46,24 @@ callbacks:
     save_last: true
     save_weights_only: true
 
+dataloaders:
+  train:
+    target: torch.utils.data.DataLoader
+    params:
+      shuffle: false
+      batch_size: 32
+      num_workers: 16
+      drop_last: false
+      pin_memory: true
+  valid:
+    target: torch.utils.data.DataLoader
+    params:
+      shuffle: false
+      batch_size: 32
+      num_workers: 16
+      drop_last: false
+      pin_memory: true
+      
 datasets:
   train:
     target: denk_baseline.datasets.SegmentationBinaryDataset
@@ -63,3 +81,6 @@ datasets:
       img_format: jpg
       images_dir: path_to_valid_images
       masks_dir: path_to_valid_masks
+
+loggers:
+- target: pytorch_lightning.loggers.TensorBoardLogger

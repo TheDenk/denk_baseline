@@ -40,8 +40,13 @@ class CustomTrainAugs(BaseAugs):
 class ClassificationTrainAugs(BaseAugs):
     def get_augs(self):
         return A.Compose([
+            A.Resize(512, 512, always_apply=True),
+            A.OneOf([
+                A.RandomCrop(320, 320, p=1.0),
+                A.RandomCrop(384, 384, p=1.0),
+                A.RandomCrop(448, 448, p=1.0),
+            ], p=0.75),
             A.ShiftScaleRotate(shift_limit=0.0625, scale_limit=0.2, rotate_limit=15, p=0.5, border_mode=cv2.BORDER_REFLECT),
-            A.ToGray(p=0.5),
             A.HorizontalFlip(p=0.5),
             A.VerticalFlip(p=0.5),
             A.RandomRotate90(p=0.5),
@@ -49,9 +54,10 @@ class ClassificationTrainAugs(BaseAugs):
             A.RandomBrightnessContrast(brightness_limit=0.35, contrast_limit=0.5, brightness_by_max=True, p=0.5),
             A.Cutout(num_holes=8, max_h_size=16, max_w_size=16, fill_value=0, p=0.5),
             A.OneOf([
-                # A.OpticalDistortion(p=0.5),
-                # A.GridDistortion(p=0.5),
-                A.GaussianBlur(p=1.0),
+                A.OpticalDistortion(p=1.0),
+                A.GridDistortion(p=1.0),
             ], p=0.5),
-        ], p=0.95)
+            A.GaussianBlur(p=0.5),
+            A.Resize(256, 256, always_apply=True),
+        ], p=1.0)
 

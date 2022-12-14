@@ -419,7 +419,7 @@ class ClassificationMulticlassDataset(Dataset):
     
 
 class RSNADataset(Dataset):
-    def __init__(self, csv_path, images_dir, img_w=None, img_h=None, augs=None, mixup_proba=0.0, roi_proba=0.5):
+    def __init__(self, csv_path, images_dir, img_w=None, img_h=None, augs=None, mixup_proba=0.0, roi_proba=0.0):
         self.df = pd.read_csv(csv_path).reset_index()
         self.images_dir = images_dir
         self.img_w = img_w
@@ -441,7 +441,7 @@ class RSNADataset(Dataset):
         ys = contour.squeeze()[:, 0]
         xs = contour.squeeze()[:, 1]
         roi =  img[np.min(xs):np.max(xs), np.min(ys):np.max(ys)]
-        return cv2.resize(roi, (self.img_w, self.img_h))
+        return roi
     
     def get_item(self, index):
         img_id = self.df.iloc[index]['image_id']
@@ -465,10 +465,11 @@ class RSNADataset(Dataset):
         image, label = self.get_item(index)
         
         if np.random.random() < self.mixup_proba:
-            c_index = np.random.randint(0, len(self.canser_ids))
-            s_id = self.canser_ids[c_index]
+            # c_index = np.random.randint(0, len(self.canser_ids))
+            # s_id = self.canser_ids[c_index]
+            s_id = np.random.randint(0, self.df.shape[0])
+
             s_image, s_label = self.get_item(s_id)
-            
             alpha = min(max(np.random.random(), 0.2), 0.8)
             beta = 1.0 - alpha
             image = cv2.addWeighted(image, alpha, s_image, beta, 0.0)
