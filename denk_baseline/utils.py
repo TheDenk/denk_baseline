@@ -14,11 +14,17 @@ def get_img_names(folder, img_format='png'):
     img_names = [os.path.basename(x) for x in img_paths]
     return img_names
 
-def read_image(img_path, **kwargs):
-    image = cv2.imread(img_path, **kwargs)
+def read_image(img_path: str, to_rgb: bool=True, flag: int=cv2.IMREAD_COLOR) -> np.array:
+    '''
+    img_path: path to image
+    to_rgb: apply cv2.COLOR_BGR2RGB or not
+    flag: [cv2.IMREAD_COLOR, cv2.IMREAD_GRAYSCALE, cv2.IMREAD_UNCHANGED]
+    '''
+    image = cv2.imread(img_path, flag)
     if image is None: 
-        raise FileNotFoundError(f'FILE NOT FOUND: {img_path}')
-    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        raise FileNotFoundError(f'{img_path}')
+    if to_rgb: 
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     return image
 
 def preprocess_image(image, img_w=None, img_h=None, interpolation=cv2.INTER_LINEAR, mean=np.array([0, 0, 0]), std=np.array([1, 1, 1])):
