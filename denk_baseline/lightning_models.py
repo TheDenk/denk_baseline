@@ -138,7 +138,7 @@ class SegmentationBinaryModel(BaseModel):
             'loss': loss,
         }
 
-class ClassificationBinaryModel(BaseModel):
+class ClassificationBase(BaseModel):
     def __init__(self, config):
         super().__init__(config)
 
@@ -162,6 +162,8 @@ class ClassificationBinaryModel(BaseModel):
             metric_value = self.metrics[m_name](torch.cat(self.valid_pr), torch.cat(self.valid_gt))
             self.log(metric_info, metric_value, on_step=False, on_epoch=True, prog_bar=True)  
 
+
+class ClassificationBinaryModel(ClassificationBase):
     def _common_step(self, batch, batch_idx, stage):
         gt_img, gt_label = batch['image'], batch['label'].float().unsqueeze(1)
         pr_label = self.model(gt_img.contiguous()).float()
@@ -200,33 +202,13 @@ class ClassificationMulticlassModel(BaseModel):
             loss += c_loss
         self.log(f"total_loss_{stage}", loss, on_step=False, on_epoch=True, prog_bar=True)
         
-        for m_name in self.metrics.keys():
-            metric_info = f"{m_name}_{stage}"
-            metric_value = self.metrics[m_name](pr_label.cpu(), oh_label.cpu())
-            self.log(metric_info, metric_value, on_step=False, on_epoch=True, prog_bar=True)              
+        if stage == 'train':
+            self.train_pr.append(pr_label.cpu().detach())
+            self.train_gt.append(oh_label.cpu().detach())
+        if stage == 'valid':
+            self.valid_pr.append(pr_label.cpu().detach())
+            self.valid_gt.append(oh_label.cpu().detach())           
         return {
             'loss': loss,
         }
-    
-class ClassificationMixModel(BaseModel):
-    def __init__(self, config):
-        super().__init__(config)
-
-    def _common_step(self, batch, batch_idx, stage):
-        gt_img, gt_label = batch['image'], batch['labels'].float()
-        pr_label = self.model(gt_img.contiguous()).float()
-
-        loss = 0
-        for c_name in self.criterions.keys():
-            c_loss = self.criterions[c_name](pr_label, gt_label) * self.crit_weights[c_name]
-            self.log(f"{c_name}_loss_{stage}", c_loss, on_epoch=True, prog_bar=True)
-            loss += c_loss
-        self.log(f"total_loss_{stage}", loss, on_step=False, on_epoch=True, prog_bar=True)
         
-        for m_name in self.metrics.keys():
-            metric_info = f"{m_name}_{stage}"
-            metric_value = self.metrics[m_name](pr_label.cpu(), gt_label.long().cpu())
-            self.log(metric_info, metric_value, on_step=False, on_epoch=True, prog_bar=True)              
-        return {
-            'loss': loss,
-        }
