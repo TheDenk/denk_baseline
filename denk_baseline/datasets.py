@@ -12,7 +12,7 @@ import pydicom
 import nibabel as nib
 from pydicom.pixel_data_handlers.util import apply_voi_lut
 
-from .utils import preprocess_image, preprocess_mask2onehot, preprocess_single_mask, get_img_names, rle2mask, resize_if_need_up, resize_if_need_down
+from .utils import read_image, preprocess_image, preprocess_mask2onehot, preprocess_single_mask, get_img_names, rle2mask, resize_if_need_up, resize_if_need_down
 # from hengk_augs import train_augment_v00a, train_augment_v00
 
 
@@ -448,7 +448,7 @@ class RSNADataset(Dataset):
         patient_id = self.df.iloc[index]['patient_id']
         img_path = os.path.join(self.images_dir, f'{patient_id}', f'{img_id}.png')
         
-        image = cv2.imread(img_path).astype(np.uint8)
+        image = read_image(img_path).astype(np.uint8)
         
         if np.random.random() < self.roi_proba:
             image = self.img2roi(image)
