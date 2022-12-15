@@ -1,6 +1,5 @@
 import torch
 import pytorch_lightning as pl
-
 from .utils import instantiate_from_config, get_obj_from_str
 
 
@@ -143,6 +142,26 @@ class ClassificationBinaryModel(BaseModel):
     def __init__(self, config):
         super().__init__(config)
 
+    def on_validation_epoch_start(self):
+        self.valid_pr = []
+        self.valid_gt = []
+    
+    def on_train_epoch_start(self):
+        self.train_pr = []
+        self.train_gt = []
+    
+    def on_validation_epoch_end(self):
+        for m_name in self.metrics.keys():
+            metric_info = f"{m_name}_valid"
+            metric_value = self.metrics[m_name](torch.cat(self.valid_pr), torch.cat(self.valid_gt))
+            self.log(metric_info, metric_value, on_step=False, on_epoch=True, prog_bar=True)   
+    
+    def on_train_epoch_end(self):
+        for m_name in self.metrics.keys():
+            metric_info = f"{m_name}_valid"
+            metric_value = self.metrics[m_name](torch.cat(self.valid_pr), torch.cat(self.valid_gt))
+            self.log(metric_info, metric_value, on_step=False, on_epoch=True, prog_bar=True)  
+
     def _common_step(self, batch, batch_idx, stage):
         gt_img, gt_label = batch['image'], batch['label'].float().unsqueeze(1)
         pr_label = self.model(gt_img.contiguous()).float()
@@ -153,11 +172,14 @@ class ClassificationBinaryModel(BaseModel):
             self.log(f"{c_name}_loss_{stage}", c_loss, on_epoch=True, prog_bar=True)
             loss += c_loss
         self.log(f"total_loss_{stage}", loss, on_step=False, on_epoch=True, prog_bar=True)
-        
-        for m_name in self.metrics.keys():
-            metric_info = f"{m_name}_{stage}"
-            metric_value = self.metrics[m_name](pr_label.cpu().squeeze(), gt_label.cpu().long().squeeze())
-            self.log(metric_info, metric_value, on_step=False, on_epoch=True, prog_bar=True)              
+          
+        if stage == 'train':
+            self.train_pr.append(pr_label.cpu().detach().squeeze())
+            self.train_gt.append(gt_label.cpu().detach().long().squeeze())
+        if stage == 'valid':
+            self.valid_pr.append(pr_label.cpu().detach().squeeze())
+            self.valid_gt.append(gt_label.cpu().detach().long().squeeze())
+
         return {
             'loss': loss,
         }

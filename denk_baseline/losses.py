@@ -11,7 +11,7 @@ class FocalWithLogits(nn.Module):
         self.epsilon = 1e-12
 
     def forward(self, probs, target):
-        probs = F.sigmoid(probs)
+        probs = torch.sigmoid(probs)
         one_subtract_probs = 1.0 - probs
         # add epsilon
         probs_new = probs + self.epsilon

@@ -42,7 +42,7 @@ class ClassificationTrainAugs(BaseAugs):
         return A.Compose([
             A.Resize(512, 512, always_apply=True),
             A.OneOf([
-                A.RandomCrop(320, 320, p=1.0),
+                # A.RandomCrop(320, 320, p=1.0),
                 A.RandomCrop(384, 384, p=1.0),
                 A.RandomCrop(448, 448, p=1.0),
             ], p=0.75),
@@ -58,6 +58,6 @@ class ClassificationTrainAugs(BaseAugs):
                 A.GridDistortion(p=1.0),
             ], p=0.5),
             A.GaussianBlur(p=0.5),
-            A.Resize(256, 256, always_apply=True),
+            A.Resize(512, 512, always_apply=True),
         ], p=1.0)
 

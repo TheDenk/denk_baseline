@@ -34,8 +34,8 @@ class SegmentationMulticlassDataset(Dataset):
         img_path = os.path.join(self.images_dir, img_name)
         msk_path = os.path.join(self.masks_dir, img_name)
 
-        image = cv2.imread(img_path)
-        mask = cv2.imread(msk_path, 0)
+        image = read_image(img_path)
+        mask = read_image(msk_path, flag=cv2.IMREAD_GRAYSCALE)
 
         if self.augs is not None:
             item = self.augs(image=image, mask=mask)
@@ -71,8 +71,8 @@ class SegmentationBinaryDataset(Dataset):
         img_path = os.path.join(self.images_dir, img_name)
         msk_path = os.path.join(self.masks_dir, img_name)
 
-        image = cv2.imread(img_path)
-        mask = cv2.imread(msk_path, 0)
+        image = read_image(img_path)
+        mask = read_image(msk_path, flag=cv2.IMREAD_GRAYSCALE)
 
         if self.augs is not None:
             item = self.augs(image=image, mask=mask)
@@ -136,8 +136,8 @@ class HubmapDataset(Dataset):
             img_path = os.path.join(self.images_dir, img_name)
             mask_path = os.path.join(self.masks_dir, img_name)
 
-            image = cv2.imread(img_path)
-            mask = cv2.imread(mask_path, 0)
+            image = read_image(img_path)
+            mask = read_image(mask_path, flag=cv2.IMREAD_GRAYSCALE)
 
             if np.random.random() > 0.5:
                 img_h, img_w = image.shape[:2]
@@ -175,7 +175,7 @@ class HubmapDataset(Dataset):
             img_name = '{}.tiff'.format(info['id'])
             img_path = os.path.join(self.images_dir, img_name)
             msk_path = os.path.join(self.masks_dir, img_name)
-            image = cv2.imread(img_path)
+            image = read_image(img_path)
             img_h, img_w = image.shape[:2]
 
             if self.stage == 'train' and np.random.random() < 0.5:
@@ -186,7 +186,7 @@ class HubmapDataset(Dataset):
                 normalizer = np.random.choice(self.normalizers) 
                 image, _, _ = normalizer.normalize(I=image, stains=True)
 
-            mask = cv2.imread(msk_path, 0)
+            mask = read_image(mask_path, flag=cv2.IMREAD_GRAYSCALE)
 
             if self.augs is not None:
                 item = self.augs(image=image, mask=mask)
@@ -252,7 +252,7 @@ class HubmapDatasetFromRLE(Dataset):
             img_name = f'{img_id}.jpg'
             img_path = os.path.join(self.images_dir, img_name)
 
-            image = cv2.imread(img_path)
+            image = read_image(img_path)
             img_h, img_w = image.shape[:2]
             mask = rle2mask(mask_rles[i], (img_h, img_w))
 
@@ -291,7 +291,7 @@ class HubmapDatasetFromRLE(Dataset):
         else:
             img_name = '{}.jpg'.format(info['id'])
             img_path = os.path.join(self.images_dir, img_name)
-            image = cv2.imread(img_path)
+            image = read_image(img_path)
             img_h, img_w = image.shape[:2]
 
             if self.stage == 'train' and np.random.random() > 0.5:
@@ -339,6 +339,7 @@ def mask_median(im, val=255):
     im[mask, :] = val
     return im, mask
 
+
 class ClassificationBinaryDataset(Dataset):
     def __init__(self, csv_path, images_dir, stage, img_w=None, img_h=None, augs=None, img_format='jpg'):
         self.df = pd.read_csv(csv_path)
@@ -357,7 +358,7 @@ class ClassificationBinaryDataset(Dataset):
         img_name = f'{img_name}.{self.img_format }' if self.img_format is not None else img_name
         img_path = os.path.join(self.images_dir, img_name)
 
-        image = cv2.imread(img_path)
+        image = read_image(img_path)
         # image = Image.open(img_path)
         # image.thumbnail((self.img_w, self.img_h))
         # image = np.array(image)
@@ -400,7 +401,7 @@ class ClassificationMulticlassDataset(Dataset):
         img_name = self.df.iloc[index]['image_id']
         img_name = f'{img_name}.{self.img_format }' if self.img_format is not None else img_name
         img_path = os.path.join(self.images_dir, img_name)
-        image = cv2.imread(img_path)
+        image = read_image(img_path)
 
         if self.augs is not None:
             image = self.augs(image=image)['image']
@@ -465,9 +466,9 @@ class RSNADataset(Dataset):
         image, label = self.get_item(index)
         
         if np.random.random() < self.mixup_proba:
-            # c_index = np.random.randint(0, len(self.canser_ids))
-            # s_id = self.canser_ids[c_index]
-            s_id = np.random.randint(0, self.df.shape[0])
+            c_index = np.random.randint(0, len(self.canser_ids))
+            s_id = self.canser_ids[c_index]
+            # s_id = np.random.randint(0, self.df.shape[0])
 
             s_image, s_label = self.get_item(s_id)
             alpha = min(max(np.random.random(), 0.2), 0.8)
