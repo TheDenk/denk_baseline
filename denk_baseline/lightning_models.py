@@ -158,7 +158,7 @@ class ClassificationBase(BaseModel):
     
     def on_train_epoch_end(self):
         for m_name in self.metrics.keys():
-            metric_info = f"{m_name}_valid"
+            metric_info = f"{m_name}_train"
             metric_value = self.metrics[m_name](torch.cat(self.valid_pr), torch.cat(self.valid_gt))
             self.log(metric_info, metric_value, on_step=False, on_epoch=True, prog_bar=True)  
 
