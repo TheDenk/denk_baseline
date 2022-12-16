@@ -12,7 +12,7 @@ class BaseMetric:
         raise NotImplementedError()
 
     def __call__(self, y_pred, y_true):
-        if not self.from_logits:
+        if self.from_logits:
             y_pred = torch.sigmoid(y_pred)
         y_pred = (y_pred > self.threshold).numpy().astype(int)
         y_true = y_true.numpy()
@@ -48,7 +48,7 @@ class PFScore:
         return self.calculate(y_pred, y_true, self.beta)
 
     def calculate(self, preds, labels, beta=1):
-        if not self.from_logits:
+        if self.from_logits:
             preds = torch.sigmoid(preds)
         preds = preds.clip(0, 1)
         y_true_count = labels.sum()
