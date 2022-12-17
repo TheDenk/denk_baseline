@@ -153,14 +153,20 @@ class ClassificationBase(BaseModel):
     def on_validation_epoch_end(self):
         for m_name in self.metrics.keys():
             metric_info = f"{m_name}_valid"
-            metric_value = self.metrics[m_name](torch.cat(self.valid_pr), torch.cat(self.valid_gt))
-            self.log(metric_info, metric_value, on_step=False, on_epoch=True, prog_bar=True)   
+            best_metric = 0.0
+            for tres in [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]:
+                metric_value = self.metrics[m_name](torch.cat(self.valid_pr), torch.cat(self.valid_gt), threshold=tres)
+                best_metric = max(best_metric, metric_value)
+            self.log(metric_info, best_metric, on_step=False, on_epoch=True, prog_bar=True)   
     
     def on_train_epoch_end(self):
         for m_name in self.metrics.keys():
             metric_info = f"{m_name}_train"
-            metric_value = self.metrics[m_name](torch.cat(self.train_pr), torch.cat(self.train_gt))
-            self.log(metric_info, metric_value, on_step=False, on_epoch=True, prog_bar=True)  
+            best_metric = 0.0
+            for tres in [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]:
+                metric_value = self.metrics[m_name](torch.cat(self.train_pr), torch.cat(self.train_gt), threshold=tres)
+                best_metric = max(best_metric, metric_value)
+            self.log(metric_info, best_metric, on_step=False, on_epoch=True, prog_bar=True)  
 
 
 class ClassificationBinaryModel(ClassificationBase):

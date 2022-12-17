@@ -458,7 +458,7 @@ class RSNADataset(Dataset):
             image = self.augs(image=image)['image']
             
         label = self.df.iloc[index]['cancer']
-        
+        image = cv2.resize(image, (self.img_w, self.img_h))
         return image, label
     
     def __getitem__(self, index):
@@ -471,7 +471,7 @@ class RSNADataset(Dataset):
             # s_id = np.random.randint(0, self.df.shape[0])
 
             s_image, s_label = self.get_item(s_id)
-            alpha = min(max(np.random.random(), 0.2), 0.8)
+            alpha = min(max(np.random.random(), 0.1), 0.9)
             beta = 1.0 - alpha
             image = cv2.addWeighted(image, alpha, s_image, beta, 0.0)
             label = label*alpha + s_label*beta
