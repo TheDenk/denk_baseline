@@ -57,6 +57,6 @@ class ClassificationTrainAugs(BaseAugs):
                 # A.GridDistortion(p=1.0),
                 A.GaussianBlur(p=1.0),
             ], p=0.5),
-            A.Resize(256, 256, always_apply=True),
+            A.Resize(512, 512, always_apply=True),
         ], p=1.0)
 

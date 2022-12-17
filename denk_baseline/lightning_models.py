@@ -141,32 +141,48 @@ class SegmentationBinaryModel(BaseModel):
 class ClassificationBase(BaseModel):
     def __init__(self, config):
         super().__init__(config)
+        self.predict_values = {
+            x: {'gt': [], 'pr': []} for x in ['train', 'valid', 'test']
+        }
 
     def on_validation_epoch_start(self):
-        self.valid_pr = []
-        self.valid_gt = []
+        self.predict_values['valid'] = {'gt': [], 'pr': []}
     
     def on_train_epoch_start(self):
-        self.train_pr = []
-        self.train_gt = []
+        self.predict_values['train'] = {'gt': [], 'pr': []}
     
-    def on_validation_epoch_end(self):
-        for m_name in self.metrics.keys():
-            metric_info = f"{m_name}_valid"
+    def calculate_metrics(self, stage):
+        gt = self.predict_values[stage]['gt']
+        pr = self.predict_values[stage]['pr']
+
+        metrics = self.config.get('metrics', [])
+        for m_info in metrics:
+            m_name = m_info['name']
+            metric = instantiate_from_config(m_info)
+            metric_value = metric(torch.cat(pr), torch.cat(gt))
+            self.log(f'{m_name}_valid', metric_value, on_step=False, on_epoch=True, prog_bar=True)
+
+        metrics_thresholds = self.config.get('metrics_thresholds', [])
+        for m_info in metrics_thresholds:
+            m_name = m_info['name']
+
             best_metric = 0.0
-            for tres in [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]:
-                metric_value = self.metrics[m_name](torch.cat(self.valid_pr), torch.cat(self.valid_gt), threshold=tres)
-                best_metric = max(best_metric, metric_value)
-            self.log(metric_info, best_metric, on_step=False, on_epoch=True, prog_bar=True)   
+            best_thres = 0.0
+            for thres in m_info['thresholds']:
+                metric = get_obj_from_str(m_info['target'])(**m_info.get('params', {}), threshold=thres)
+                
+                metric_value = metric(torch.cat(pr), torch.cat(gt))
+                if metric_value > best_metric:
+                    best_metric = metric_value
+                    best_thres = thres
+            self.log(f'{m_name}_{stage}', best_metric, on_step=False, on_epoch=True, prog_bar=True)
+            self.log(f'{m_name}_{stage}_best_threshold', best_thres, on_step=False, on_epoch=True, prog_bar=True)
+
+    def on_validation_epoch_end(self):
+        self.calculate_metrics('valid')
     
     def on_train_epoch_end(self):
-        for m_name in self.metrics.keys():
-            metric_info = f"{m_name}_train"
-            best_metric = 0.0
-            for tres in [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]:
-                metric_value = self.metrics[m_name](torch.cat(self.train_pr), torch.cat(self.train_gt), threshold=tres)
-                best_metric = max(best_metric, metric_value)
-            self.log(metric_info, best_metric, on_step=False, on_epoch=True, prog_bar=True)  
+        self.calculate_metrics('train')
 
 
 class ClassificationBinaryModel(ClassificationBase):
@@ -177,16 +193,12 @@ class ClassificationBinaryModel(ClassificationBase):
         loss = 0
         for c_name in self.criterions.keys():
             c_loss = self.criterions[c_name](pr_label, gt_label) * self.crit_weights[c_name]
-            self.log(f"{c_name}_loss_{stage}", c_loss, on_epoch=True, prog_bar=True)
+            self.log(f'{c_name}_loss_{stage}', c_loss, on_epoch=True, prog_bar=True)
             loss += c_loss
-        self.log(f"total_loss_{stage}", loss, on_step=False, on_epoch=True, prog_bar=True)
+        self.log(f'total_loss_{stage}', loss, on_step=False, on_epoch=True, prog_bar=True)
           
-        if stage == 'train':
-            self.train_pr.append(pr_label.cpu().detach().squeeze())
-            self.train_gt.append(gt_label.cpu().detach().long().squeeze())
-        if stage == 'valid':
-            self.valid_pr.append(pr_label.cpu().detach().squeeze())
-            self.valid_gt.append(gt_label.cpu().detach().long().squeeze())
+        self.predict_values[stage]['pr'].append(pr_label.cpu().detach().squeeze())
+        self.predict_values[stage]['gt'].append(gt_label.cpu().detach().squeeze().long())
 
         return {
             'loss': loss,
@@ -208,12 +220,8 @@ class ClassificationMulticlassModel(BaseModel):
             loss += c_loss
         self.log(f"total_loss_{stage}", loss, on_step=False, on_epoch=True, prog_bar=True)
         
-        if stage == 'train':
-            self.train_pr.append(pr_label.cpu().detach())
-            self.train_gt.append(oh_label.cpu().detach())
-        if stage == 'valid':
-            self.valid_pr.append(pr_label.cpu().detach())
-            self.valid_gt.append(oh_label.cpu().detach())           
+        self.predict_values[stage]['pr'].append(pr_label.cpu().detach().squeeze())
+        self.predict_values[stage]['gt'].append(gt_label.cpu().detach().squeeze().long())         
         return {
             'loss': loss,
         }

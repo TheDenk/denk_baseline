@@ -11,11 +11,10 @@ class BaseMetric:
     def calculate(self, *args, **kwargs):
         raise NotImplementedError()
 
-    def __call__(self, y_pred, y_true, threshold=None):
+    def __call__(self, y_pred, y_true):
         if self.from_logits:
             y_pred = torch.sigmoid(y_pred)
-        threshold = self.threshold if threshold is None else threshold
-        y_pred = (y_pred > threshold).numpy().astype(int)
+        y_pred = (y_pred > self.threshold).numpy().astype(int)
         y_true = y_true.numpy()
         return self.calculate(y_true, y_pred, **self.kwargs)
 
@@ -41,19 +40,20 @@ class F1Score(BaseMetric):
 
 
 class PFScore:
-    def __init__(self, beta=1, from_logits=True):
+    def __init__(self, beta=1, from_logits=True, threshold=None):
         self.beta = beta
         self.from_logits = from_logits
+        self.threshold = threshold
 
-    def __call__(self, y_pred, y_true, threshold=None):
-        return self.calculate(y_pred, y_true, self.beta, threshold=threshold)
+    def __call__(self, y_pred, y_true):
+        return self.calculate(y_pred, y_true, self.beta)
 
     def calculate(self, preds, labels, beta=1, threshold=None):
         if self.from_logits:
             preds = torch.sigmoid(preds)
         preds = preds.clip(0, 1)
-        if threshold is not None:
-            preds = (preds > threshold).long()
+        if self.threshold is not None:
+            preds = (preds > self.threshold).long()
         y_true_count = labels.sum()
         ctp = preds[labels==1].sum()
         cfp = preds[labels==0].sum()
