@@ -160,7 +160,7 @@ class ClassificationBase(BaseModel):
             m_name = m_info['name']
             metric = instantiate_from_config(m_info)
             metric_value = metric(torch.cat(pr), torch.cat(gt))
-            self.log(f'{m_name}_valid', metric_value, on_step=False, on_epoch=True, prog_bar=True)
+            self.log(f'{m_name}_{stage}', metric_value, on_step=False, on_epoch=True, prog_bar=True)
 
         metrics_thresholds = self.config.get('metrics_thresholds', [])
         for m_info in metrics_thresholds:
@@ -205,7 +205,7 @@ class ClassificationBinaryModel(ClassificationBase):
         }
 
 
-class ClassificationMulticlassModel(BaseModel):
+class ClassificationMulticlassModel(ClassificationBase):
     def __init__(self, config):
         super().__init__(config)
 
@@ -221,7 +221,7 @@ class ClassificationMulticlassModel(BaseModel):
         self.log(f"total_loss_{stage}", loss, on_step=False, on_epoch=True, prog_bar=True)
         
         self.predict_values[stage]['pr'].append(pr_label.cpu().detach().squeeze())
-        self.predict_values[stage]['gt'].append(gt_label.cpu().detach().squeeze().long())         
+        self.predict_values[stage]['gt'].append(oh_label.cpu().detach().squeeze())         
         return {
             'loss': loss,
         }

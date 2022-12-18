@@ -16,7 +16,8 @@ class BaseMetric:
             y_pred = torch.sigmoid(y_pred)
         y_pred = (y_pred > self.threshold).numpy().astype(int)
         y_true = y_true.numpy()
-        return self.calculate(y_true, y_pred, **self.kwargs)
+        m_value = self.calculate(y_true, y_pred, **self.kwargs)
+        return m_value or 0.0
 
 
 class ROCAUC(BaseMetric):
