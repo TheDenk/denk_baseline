@@ -178,3 +178,4 @@ mix_mark.csv
 segformer_fold_0.ipynb
 mayo_config.yaml
 CoaT.ipynb
+rsna_series.yaml

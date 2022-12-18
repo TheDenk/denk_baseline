@@ -14,7 +14,8 @@ from denk_baseline.utils import instantiate_from_config, get_obj_from_str
 
 def parse_args():
     parser = ArgumentParser()
-    parser.add_argument('--config', default='./configs/base_config.yaml')
+    parser.add_argument('--config', required=True)
+    parser.add_argument('--series', required=False, default=False, type=bool)
     args = parser.parse_args()
     return args
 
@@ -32,14 +33,15 @@ def preprocess_config(config):
 
     # Common params
     # MAX EPOCH
-    max_epoch = config['common'].get('max_epoch', False)
-    if max_epoch:
-        config['trainer']['params']['max_epoch'] = max_epoch
+    max_epochs = config['common'].get('max_epochs', False)
+    print('-'*20, max_epochs)
+    if max_epochs:
+        config['trainer']['params']['max_epochs'] = max_epochs
         
         for opt_index, _ in enumerate(config['optimizers']):
             sch = config['optimizers'][opt_index].get('scheduler', False)
             if  sch and 'LinearWarmupCosineAnnealingLR' in sch['target']:
-                config['optimizers'][opt_index]['scheduler']['params']['max_epoch'] = max_epoch
+                config['optimizers'][opt_index]['scheduler']['params']['max_epochs'] = max_epochs
 
     # IMG_SIZE
     img_size = config['common'].get('img_size', False)
@@ -87,9 +89,7 @@ def parse_loggers(config):
     return loggers if len(loggers) else None
 
 
-if __name__ == '__main__':
-    args = parse_args()
-    config = OmegaConf.load(args.config)
+def train(config):
     config = preprocess_config(config)
     save_config(config)
     print(OmegaConf.to_yaml(config))
@@ -103,3 +103,17 @@ if __name__ == '__main__':
     trainer = get_obj_from_str(config['trainer']['target'])(logger=logger, **config['trainer']['params'])
 
     trainer.fit(model, datamodule) 
+
+if __name__ == '__main__':
+    args = parse_args()
+    if args.series:
+        series_config = OmegaConf.load(args.config)
+        for exp_name, changes in series_config['experiments'].items():
+            main_config = OmegaConf.load(series_config['main_config'])
+            main_config['common']['exp_name'] = main_config['common']['exp_name'] + f'_{exp_name}'
+            for ch_name in changes:
+                main_config[ch_name] = changes[ch_name]
+            train(main_config)
+    else:
+        main_config = OmegaConf.load(args.config)
+        train(main_config)
