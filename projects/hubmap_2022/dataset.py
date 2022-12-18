@@ -27,10 +27,10 @@ class HubmapDataset(Dataset):
     def get_stain_normalizers(self):
         import torchstain as ts
         targets = [
-            cv2.imread('./stain_images/1.jpg'),
-            cv2.imread('./stain_images/2.jpg'),
-            cv2.imread('./stain_images/3.jpg'),
-            cv2.imread('./stain_images/4.jpg'),
+            cv2.imread('./projects/hubmap_2022/stain_images/1.jpg'),
+            cv2.imread('./projects/hubmap_2022/stain_images/2.jpg'),
+            cv2.imread('./projects/hubmap_2022/stain_images/3.jpg'),
+            cv2.imread('./projects/hubmap_2022/stain_images/4.jpg'),
         ] 
         normalizers = []
         for target in targets:

@@ -4,7 +4,7 @@ import albumentations as A
 from denk_baseline.augs import BaseAugs
 
 
-class CustomTrainAugs(BaseAugs):
+class TrainAugs(BaseAugs):
     def get_augs(self):
         return A.Compose([
             A.ShiftScaleRotate(shift_limit=0.0625, scale_limit=0.2, rotate_limit=45, p=0.5, border_mode=cv2.BORDER_REFLECT),
