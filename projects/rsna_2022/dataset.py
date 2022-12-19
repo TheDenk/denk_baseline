@@ -9,8 +9,8 @@ from denk_baseline.utils import read_image, preprocess_image
 
 
 class RSNADataset(Dataset):
-    def __init__(self, csv_path, images_dir, img_w=None, img_h=None, augs=None, mixup_proba=0.0, roi_proba=0.0):
-        self.df = pd.read_csv(csv_path).reset_index()[:1000]
+    def __init__(self, csv_path, images_dir, img_w=None, img_h=None, augs=None, mixup_proba=0.0, roi_proba=0.0, clahe_proba=0.0):
+        self.df = pd.read_csv(csv_path).reset_index()
         self.images_dir = images_dir
         self.img_w = img_w
         self.img_h = img_h
@@ -18,9 +18,19 @@ class RSNADataset(Dataset):
         self.canser_ids = self.df[self.df.cancer == 1].index
         self.mixup_proba = mixup_proba
         self.roi_proba = roi_proba
+        self.clahe_proba = clahe_proba
 
     def __len__(self):
         return self.df.shape[0]
+
+    def clahe(self, in_img):
+        img_0 = cv2.cvtColor(in_img, cv2.COLOR_RGB2GRAY)
+        clip_1 = np.random.random()
+        clip_2 = clip_1 + np.random.random()
+        img_1 = cv2.createCLAHE(clipLimit=clip_1).apply(img_0)
+        img_2 = cv2.createCLAHE(clipLimit=clip_2).apply(img_0)
+        img_out = cv2.merge((img_0, img_1, img_2))
+        return img_out
 
     def img2roi(self, img):
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
@@ -42,6 +52,9 @@ class RSNADataset(Dataset):
         
         if np.random.random() < self.roi_proba:
             image = self.img2roi(image)
+        
+        if np.random.random() < self.clahe_proba:
+            image = self.clahe(image)
 
         if self.augs is not None:
             image = self.augs(image=image)['image']

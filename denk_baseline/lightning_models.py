@@ -162,21 +162,29 @@ class ClassificationBase(BaseModel):
             metric_value = metric(torch.cat(pr), torch.cat(gt))
             self.log(f'{m_name}_{stage}', metric_value, on_step=False, on_epoch=True, prog_bar=True)
 
-        metrics_thresholds = self.config.get('metrics_thresholds', [])
-        for m_info in metrics_thresholds:
-            m_name = m_info['name']
-
+        metrics_thresholds = self.config.get('metrics_thresholds', False)
+        if metrics_thresholds:
+            monitor_name = metrics_thresholds['monitor']
+            thresholds = metrics_thresholds['thresholds']
             best_metric = 0.0
             best_thres = 0.0
-            for thres in m_info['thresholds']:
-                metric = get_obj_from_str(m_info['target'])(**m_info.get('params', {}), threshold=thres)
-                
-                metric_value = metric(torch.cat(pr), torch.cat(gt))
+            
+            mon_target = metrics_thresholds['metrics'][monitor_name]['target']
+            mon_params = metrics_thresholds['metrics'][monitor_name].get('params', {})
+
+            for thres in thresholds:
+                mon_object = get_obj_from_str(mon_target)(**mon_params, threshold=thres)
+                mon_value = mon_object(torch.cat(pr), torch.cat(gt))
                 if metric_value > best_metric:
-                    best_metric = metric_value
+                    best_metric = mon_value
                     best_thres = thres
-            self.log(f'{m_name}_{stage}', best_metric, on_step=False, on_epoch=True, prog_bar=True)
-            self.log(f'{m_name}_{stage}_best_threshold', best_thres, on_step=False, on_epoch=True, prog_bar=True)
+
+            for metric_name, metric_info in metrics_thresholds['metrics'].items():
+                metric = get_obj_from_str(metric_info['target'])(**metric_info.get('params', {}), threshold=best_thres)
+                metric_value = metric(torch.cat(pr), torch.cat(gt))
+                self.log(f'{metric_name}_{stage}', metric_value, on_step=False, on_epoch=True, prog_bar=True)
+
+            self.log(f'{stage}_best_threshold', best_thres, on_step=False, on_epoch=True, prog_bar=True)
 
     def on_validation_epoch_end(self):
         self.calculate_metrics('valid')

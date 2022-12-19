@@ -28,12 +28,12 @@ Also you can change come parameters of training.
 
 Binary segmentation task:  
 ```python
-python main.py --config ./configs/example_binary_config.yaml
+python train.py --config ./configs/example_binary_config.yaml
 ```
 
 Multiclass segmentation task:  
 ```python
-python main.py --config ./configs/example_multiclass_config.yaml
+python train.py --config ./configs/example_multiclass_config.yaml
 ```
   
 ##### Watch tensorboard (if available)
