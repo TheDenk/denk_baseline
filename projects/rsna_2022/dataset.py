@@ -10,7 +10,7 @@ from denk_baseline.utils import read_image, preprocess_image
 
 class RSNADataset(Dataset):
     def __init__(self, csv_path, images_dir, img_w=None, img_h=None, augs=None, mixup_proba=0.0, roi_proba=0.0):
-        self.df = pd.read_csv(csv_path).reset_index()
+        self.df = pd.read_csv(csv_path).reset_index()[:1000]
         self.images_dir = images_dir
         self.img_w = img_w
         self.img_h = img_h

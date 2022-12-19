@@ -64,9 +64,10 @@ def preprocess_config(config):
     
     return config
 
+
 def parse_loggers(config):
     str_loggers = config.get('loggers', [])
-    loggers = []
+    loggers = {}
     for str_logger in str_loggers:
         params = str_logger.get('params', {})
         if 'TensorBoardLogger' in str_logger['target']:
@@ -76,6 +77,7 @@ def parse_loggers(config):
                 'version': config['common'].get('exp_name', 'exp0'),
                 'save_dir': 'output',
             }
+            loggers['tensorboard'] = instantiate_from_config(str_logger)
         elif 'WandbLogger' in str_logger['target']:
             str_logger['params'] = {
                 **params,
@@ -83,13 +85,13 @@ def parse_loggers(config):
                 'project': config['common'].get('project_name', 'proj0'),
                 'save_dir': 'output',
             }
+            loggers['wandb'] = instantiate_from_config(str_logger)
 
-        logger = instantiate_from_config(str_logger)
-        loggers.append(logger)
     return loggers if len(loggers) else None
 
 
-def train(config):
+
+def run_experiment(config):
     config = preprocess_config(config)
     save_config(config)
     print(OmegaConf.to_yaml(config))
@@ -99,21 +101,15 @@ def train(config):
     datamodule = DataModule(config)
     model = get_obj_from_str(config['lightning_model'])(config)
 
-    logger = parse_loggers(config)
-    trainer = get_obj_from_str(config['trainer']['target'])(logger=logger, **config['trainer']['params'])
+    loggers = parse_loggers(config)
+    trainer = get_obj_from_str(config['trainer']['target'])(logger=[v for _, v in loggers.items()], **config['trainer']['params'])
 
     trainer.fit(model, datamodule) 
 
+    if 'wandb' in loggers: loggers['wandb']._experiment.finish()
+
+
 if __name__ == '__main__':
     args = parse_args()
-    if args.series:
-        series_config = OmegaConf.load(args.config)
-        for exp_name, changes in series_config['experiments'].items():
-            main_config = OmegaConf.load(series_config['main_config'])
-            main_config['common']['exp_name'] = main_config['common']['exp_name'] + f'_{exp_name}'
-            for ch_name in changes:
-                main_config[ch_name] = changes[ch_name]
-            train(main_config)
-    else:
-        main_config = OmegaConf.load(args.config)
-        train(main_config)
+    main_config = OmegaConf.load(args.config)
+    run_experiment(main_config)
