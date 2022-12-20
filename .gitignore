@@ -179,3 +179,4 @@ segformer_fold_0.ipynb
 mayo_config.yaml
 CoaT.ipynb
 rsna_series.yaml
+rsna_series_all_folds.yaml
