@@ -150,11 +150,14 @@ class ClassificationBase(BaseModel):
     
     def on_train_epoch_start(self):
         self.predict_values['train'] = {'gt': [], 'pr': []}
+
+    def on_test_epoch_start(self):
+        self.predict_values['test'] = {'gt': [], 'pr': []}    
     
     def calculate_metrics(self, stage):
         gt = self.predict_values[stage]['gt']
         pr = self.predict_values[stage]['pr']
-
+        
         metrics = self.config.get('metrics', [])
         for m_info in metrics:
             m_name = m_info['name']
@@ -191,6 +194,9 @@ class ClassificationBase(BaseModel):
     
     def on_train_epoch_end(self):
         self.calculate_metrics('train')
+
+    def on_test_epoch_end(self):
+        self.calculate_metrics('test')
 
 
 class ClassificationBinaryModel(ClassificationBase):

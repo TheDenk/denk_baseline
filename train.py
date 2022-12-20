@@ -106,6 +106,9 @@ def run_experiment(config):
 
     trainer.fit(model, datamodule) 
 
+    if config['datasets'].get('test', False):
+        trainer.test(ckpt_path='best', datamodule=datamodule)
+
     if 'wandb' in loggers: loggers['wandb']._experiment.finish()
 
 
