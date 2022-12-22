@@ -52,13 +52,13 @@ def preprocess_config(config):
 
     # BATCH_SIZE
     batch_size = config['common'].get('batch_size', False)
-    if img_size:
+    if batch_size:
         config['dataloaders']['train']['params']['batch_size'] = batch_size
         config['dataloaders']['valid']['params']['batch_size'] = batch_size
 
     # NUM_WORKERS
     num_workers = config['common'].get('num_workers', False)
-    if img_size:
+    if num_workers:
         config['dataloaders']['train']['params']['num_workers'] = num_workers
         config['dataloaders']['valid']['params']['num_workers'] = num_workers
     
