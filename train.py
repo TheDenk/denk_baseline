@@ -34,7 +34,6 @@ def preprocess_config(config):
     # Common params
     # MAX EPOCH
     max_epochs = config['common'].get('max_epochs', False)
-    print('-'*20, max_epochs)
     if max_epochs:
         config['trainer']['params']['max_epochs'] = max_epochs
         
