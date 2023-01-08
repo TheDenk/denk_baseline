@@ -45,21 +45,36 @@ def preprocess_config(config):
     # IMG_SIZE
     img_size = config['common'].get('img_size', False)
     if img_size:
-        for stage in ['train', 'valid']:
+        for stage in ['train', 'valid', 'test']:
+            if stage not in config['datasets']:
+                continue
             for side in ['img_h', 'img_w']:
                 config['datasets'][stage]['params'][side] = img_size
+    
+    # IMG_H AND IMG_W
+    for side in ['img_h', 'img_w']:
+        img_side = config['common'].get(side, False)
+        if img_side:
+            for stage in ['train', 'valid', 'test']:
+                if stage not in config['datasets']:
+                    continue
+                config['datasets'][stage]['params'][side] = img_side
 
     # BATCH_SIZE
     batch_size = config['common'].get('batch_size', False)
     if batch_size:
-        config['dataloaders']['train']['params']['batch_size'] = batch_size
-        config['dataloaders']['valid']['params']['batch_size'] = batch_size
+        for stage in ['train', 'valid', 'test']:
+            if stage not in config['datasets']:
+                continue
+            config['dataloaders'][stage]['params']['batch_size'] = batch_size
 
     # NUM_WORKERS
     num_workers = config['common'].get('num_workers', False)
     if num_workers:
-        config['dataloaders']['train']['params']['num_workers'] = num_workers
-        config['dataloaders']['valid']['params']['num_workers'] = num_workers
+        for stage in ['train', 'valid', 'test']:
+            if stage not in config['datasets']:
+                continue
+        config['dataloaders'][stage]['params']['num_workers'] = num_workers
     
     return config
 
@@ -106,7 +121,7 @@ def run_experiment(config):
     trainer.fit(model, datamodule) 
 
     if config['datasets'].get('test', False):
-        trainer.test(ckpt_path='best', datamodule=datamodule)
+        trainer.test(ckpt_path='last', datamodule=datamodule)
 
     if 'wandb' in loggers: loggers['wandb']._experiment.finish()
 
