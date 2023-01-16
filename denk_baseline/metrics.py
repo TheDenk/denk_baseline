@@ -49,7 +49,7 @@ class PFScore:
     def __call__(self, y_pred, y_true):
         return self.calculate(y_pred, y_true, self.beta)
 
-    def calculate(self, preds, labels, beta=1, threshold=None):
+    def calculate(self, preds, labels, beta=1):
         if self.from_logits:
             preds = torch.sigmoid(preds)
         preds = preds.clip(0, 1)

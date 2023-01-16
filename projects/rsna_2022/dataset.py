@@ -1,6 +1,7 @@
 import os
 
 import cv2
+import torch
 import numpy as np
 import pandas as pd
 from torch.utils.data import Dataset
@@ -10,7 +11,7 @@ from denk_baseline.utils import read_image, preprocess_image
 
 class RSNADataset(Dataset):
     def __init__(self, csv_path, images_dir, img_w=None, img_h=None, augs=None, mixup_proba=0.0, roi_proba=0.0, clahe_proba=0.0):
-        self.df = pd.read_csv(csv_path).reset_index()
+        self.df = pd.read_csv(csv_path).reset_index()#[:1000]
         self.images_dir = images_dir
         self.img_w = img_w
         self.img_h = img_h
@@ -46,7 +47,7 @@ class RSNADataset(Dataset):
     def get_item(self, index):
         img_id = self.df.iloc[index]['image_id']
         patient_id = self.df.iloc[index]['patient_id']
-        img_path = os.path.join(self.images_dir, f'{patient_id}', f'{img_id}.png')
+        img_path = os.path.join(self.images_dir, f'{patient_id}_{img_id}.png')
         
         image = read_image(img_path).astype(np.uint8)
         
@@ -84,4 +85,5 @@ class RSNADataset(Dataset):
         return {
             'image': image, 
             'label': label,
+            # 'oh_label': torch.tensor([1 - label, 0 + label])
         }

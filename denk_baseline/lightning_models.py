@@ -234,8 +234,8 @@ class ClassificationMulticlassModel(ClassificationBase):
             loss += c_loss
         self.log(f"total_loss_{stage}", loss, on_step=False, on_epoch=True, prog_bar=True)
         
-        self.predict_values[stage]['pr'].append(pr_label.cpu().detach().squeeze())
-        self.predict_values[stage]['gt'].append(oh_label.cpu().detach().squeeze())         
+        self.predict_values[stage]['pr'].append(pr_label.cpu().detach())
+        self.predict_values[stage]['gt'].append(oh_label.cpu().detach())         
         return {
             'loss': loss,
         }
