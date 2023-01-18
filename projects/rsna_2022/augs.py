@@ -22,8 +22,8 @@ class TrainAugs(BaseAugs):
             A.RandomBrightnessContrast(brightness_limit=0.35, contrast_limit=0.5, brightness_by_max=True, p=0.5),
             A.CoarseDropout(max_holes=8, max_height=16, max_width=16, fill_value=0, p=0.5),
             A.OneOf([
-                # A.OpticalDistortion(p=1.0),
-                # A.GridDistortion(p=1.0),
+                A.OpticalDistortion(p=1.0),
+                A.GridDistortion(p=1.0),
                 A.GaussianBlur(p=1.0),
             ], p=0.5),
             A.Resize(1024, 1024, always_apply=True),

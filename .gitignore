@@ -158,6 +158,7 @@ wandb/
 output/
 oof_split/
 full_split/
+pretrain_weights/
 
 baseline.ipynb
 inference.ipynb

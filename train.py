@@ -120,8 +120,11 @@ def run_experiment(config):
 
     trainer.fit(model, datamodule) 
 
-    if config['datasets'].get('test', False):
-        trainer.test(ckpt_path='last', datamodule=datamodule)
+    # if config['datasets'].get('test', False):
+    #     import glob
+    #     model_paths = glob.glob(config['common']['save_path'] + '/*.ckpt')
+    #     for model_path in model_paths:
+    #         trainer.test(ckpt_path=model_path, datamodule=datamodule)
 
     if 'wandb' in loggers: loggers['wandb']._experiment.finish()
 
