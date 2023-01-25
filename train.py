@@ -50,6 +50,10 @@ def preprocess_config(config):
                 continue
             for side in ['img_h', 'img_w']:
                 config['datasets'][stage]['params'][side] = img_size
+        
+        if config.get('kornia_augs', False):
+            for side in ['img_h', 'img_w']:
+                config['kornia_augs']['params'][side] = img_size
     
     # IMG_H AND IMG_W
     for side in ['img_h', 'img_w']:
@@ -59,6 +63,10 @@ def preprocess_config(config):
                 if stage not in config['datasets']:
                     continue
                 config['datasets'][stage]['params'][side] = img_side
+            
+            if config.get('kornia_augs', False):
+                for side in ['img_h', 'img_w']:
+                    config['kornia_augs']['params'][side] = img_side
 
     # BATCH_SIZE
     batch_size = config['common'].get('batch_size', False)
@@ -126,7 +134,7 @@ def run_experiment(config):
     #     for model_path in model_paths:
     #         trainer.test(ckpt_path=model_path, datamodule=datamodule)
 
-    if 'wandb' in loggers: loggers['wandb']._experiment.finish()
+    # if 'wandb' in loggers: loggers['wandb']._experiment.finish()
 
 
 if __name__ == '__main__':

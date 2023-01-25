@@ -7,10 +7,14 @@ class BaseModel(pl.LightningModule):
     def __init__(self, config):
         super().__init__()
         self.config = config
+        
         self.model = instantiate_from_config(config['model'])
-
-        if 'weights' in self.config['model']:
+        if self.config['model'].get('weights', False):
             self.model = self.load_checkpoint(self.config['model']['weights'])
+
+        self.kornia_augs = config.get('kornia_augs', False)
+        if self.kornia_augs:
+            self.kornia_augs = instantiate_from_config(self.kornia_augs)
         
         self.criterions = {x['name']: instantiate_from_config(x) for x in config['criterions']}
         self.crit_weights = {x['name']: x['weight'] for x in config['criterions']}
@@ -202,6 +206,8 @@ class ClassificationBase(BaseModel):
 class ClassificationBinaryModel(ClassificationBase):
     def _common_step(self, batch, batch_idx, stage):
         gt_img, gt_label = batch['image'], batch['label'].float().unsqueeze(1)
+        if self.kornia_augs:
+            gt_img = self.kornia_augs(gt_img)
         pr_label = self.model(gt_img.contiguous()).float()
 
         loss = 0

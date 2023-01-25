@@ -319,10 +319,8 @@ class NTB(nn.Module):
 
 class NextViT(nn.Module):
     def __init__(self, stem_chs, depths, path_dropout, attn_drop=0, drop=0, num_classes=1000,
-                 strides=[1, 2, 2, 2], sr_ratios=[8, 4, 2, 1], head_dim=32, mix_block_ratio=0.75,
-                 use_checkpoint=False):
+                 strides=[1, 2, 2, 2], sr_ratios=[8, 4, 2, 1], head_dim=32, mix_block_ratio=0.75):
         super(NextViT, self).__init__()
-        self.use_checkpoint = use_checkpoint
 
         self.stage_out_channels = [[96] * (depths[0]),
                                    [192] * (depths[1] - 1) + [256],
@@ -403,10 +401,7 @@ class NextViT(nn.Module):
     def forward(self, x):
         x = self.stem(x)
         for idx, layer in enumerate(self.features):
-            if self.use_checkpoint:
-                x = checkpoint.checkpoint(layer, x)
-            else:
-                x = layer(x)
+            x = layer(x)
         x = self.norm(x)
         x = self.avgpool(x)
         x = torch.flatten(x, 1)
