@@ -3,6 +3,7 @@ sys.path.append('./repositories/pytorch-image-models')
 sys.path.append('./repositories/segmentation_models.pytorch')
 
 import os
+os.environ['TORCH_CUDNN_V8_API_ENABLED'] = '1'
 from argparse import ArgumentParser
 
 from omegaconf import OmegaConf
@@ -15,7 +16,7 @@ from denk_baseline.utils import instantiate_from_config, get_obj_from_str
 def parse_args():
     parser = ArgumentParser()
     parser.add_argument('--config', required=True)
-    parser.add_argument('--series', required=False, default=False, type=bool)
+    parser.add_argument('--test', required=False, default=False, type=bool)
     args = parser.parse_args()
     return args
 
@@ -86,7 +87,6 @@ def preprocess_config(config):
     
     return config
 
-
 def parse_loggers(config):
     str_loggers = config.get('loggers', [])
     loggers = {}
@@ -111,8 +111,6 @@ def parse_loggers(config):
 
     return loggers if len(loggers) else None
 
-
-
 def run_experiment(config):
     config = preprocess_config(config)
     save_config(config)
@@ -127,14 +125,16 @@ def run_experiment(config):
     trainer = get_obj_from_str(config['trainer']['target'])(logger=[v for _, v in loggers.items()], **config['trainer']['params'])
 
     trainer.fit(model, datamodule) 
-
-    # if config['datasets'].get('test', False):
-    #     import glob
-    #     model_paths = glob.glob(config['common']['save_path'] + '/*.ckpt')
-    #     for model_path in model_paths:
-    #         trainer.test(ckpt_path=model_path, datamodule=datamodule)
-
     # if 'wandb' in loggers: loggers['wandb']._experiment.finish()
+
+def make_test(config):
+    config = preprocess_config(config)
+    seed_everything(config['common']['seed'], workers=True)
+    datamodule = DataModule(config)
+    model = get_obj_from_str(config['lightning_model'])(config)
+    loggers = parse_loggers(config)
+    trainer = get_obj_from_str(config['trainer']['target'])(logger=[v for _, v in loggers.items()], **config['trainer']['params'])
+    trainer.test(model, datamodule=datamodule)
 
 
 if __name__ == '__main__':
