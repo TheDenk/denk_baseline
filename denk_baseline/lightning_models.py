@@ -15,6 +15,8 @@ class BaseModel(pl.LightningModule):
         self.kornia_augs = config.get('kornia_augs', False)
         if self.kornia_augs:
             self.kornia_augs = instantiate_from_config(self.kornia_augs)
+        else:
+            self.kornia_augs = torch.nn.Identity()
         
         self.criterions = {x['name']: instantiate_from_config(x) for x in config['criterions']}
         self.crit_weights = {x['name']: x['weight'] for x in config['criterions']}
@@ -205,20 +207,20 @@ class ClassificationBase(BaseModel):
 
 class ClassificationBinaryModel(ClassificationBase):
     def _common_step(self, batch, batch_idx, stage):
-        gt_img, gt_label = batch['image'], batch['label'].float().unsqueeze(1)
-        if self.kornia_augs:
+        with torch.autograd.set_detect_anomaly(True):
+            gt_img, gt_label = batch['image'], batch['label'].float().unsqueeze(1)
             gt_img = self.kornia_augs(gt_img)
-        pr_label = self.model(gt_img.contiguous()).float()
+            pr_label = self.model(gt_img.contiguous()).float()
 
-        loss = 0
-        for c_name in self.criterions.keys():
-            c_loss = self.criterions[c_name](pr_label, gt_label) * self.crit_weights[c_name]
-            self.log(f'{c_name}_loss_{stage}', c_loss, on_epoch=True, prog_bar=True)
-            loss += c_loss
-        self.log(f'total_loss_{stage}', loss, on_step=False, on_epoch=True, prog_bar=True)
-          
-        self.predict_values[stage]['pr'].append(pr_label.cpu().detach().squeeze())
-        self.predict_values[stage]['gt'].append(gt_label.cpu().detach().squeeze().long())
+            loss = 0
+            for c_name in self.criterions.keys():
+                c_loss = self.criterions[c_name](pr_label, gt_label) * self.crit_weights[c_name]
+                self.log(f'{c_name}_loss_{stage}', c_loss, on_epoch=True, prog_bar=True)
+                loss += c_loss
+            self.log(f'total_loss_{stage}', loss, on_step=False, on_epoch=True, prog_bar=True)
+            
+            self.predict_values[stage]['pr'].append(pr_label.cpu().detach().squeeze())
+            self.predict_values[stage]['gt'].append(gt_label.cpu().detach().squeeze().long())
 
         return {
             'loss': loss,

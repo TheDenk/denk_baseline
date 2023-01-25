@@ -47,7 +47,7 @@ class RSNADataset(Dataset):
     def get_item(self, index):
         img_id = self.df.iloc[index]['image_id']
         patient_id = self.df.iloc[index]['patient_id']
-        img_path = os.path.join(self.images_dir, f'{patient_id}_{img_id}.png')
+        img_path = os.path.join(self.images_dir, f'{patient_id}', f'{img_id}.png')
         
         image = read_image(img_path).astype(np.uint8)
         

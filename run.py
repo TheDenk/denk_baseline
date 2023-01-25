@@ -83,7 +83,7 @@ def preprocess_config(config):
         for stage in ['train', 'valid', 'test']:
             if stage not in config['datasets']:
                 continue
-        config['dataloaders'][stage]['params']['num_workers'] = num_workers
+            config['dataloaders'][stage]['params']['num_workers'] = num_workers
     
     return config
 

@@ -125,33 +125,33 @@ class KorniaAugs(nn.Module):
             RandomVerticalFlip(p=0.5),
         )
         
-        p=0.75
+        p=0.99
         self.crop = ImageSequential(
-            RandomCrop([img_h - img_h // 32, img_w - img_w // 32], p=p),
-            RandomCrop([img_h - img_h // 24, img_w - img_w // 24], p=p),
-            RandomCrop([img_h - img_h // 20, img_w - img_w // 20], p=p),
-            RandomCrop([img_h - img_h // 16, img_w - img_w // 16], p=p),
-            RandomCrop([img_h - img_h // 12, img_w - img_w // 12], p=p),
+            RandomCrop((img_h - img_h // 32, img_w - img_w // 32), p=p),
+            RandomCrop((img_h - img_h // 24, img_w - img_w // 24), p=p),
+            RandomCrop((img_h - img_h // 20, img_w - img_w // 20), p=p),
+            RandomCrop((img_h - img_h // 16, img_w - img_w // 16), p=p),
+            RandomCrop((img_h - img_h // 12, img_w - img_w // 12), p=p),
             random_apply=1,
         )
 
-        p=0.75
+        p=0.99
         self.transform_geometry = ImageSequential(
             RandomAffine(degrees=20, translate=0.05, scale=[0.95,1.05], shear=5, p=p),
             RandomThinPlateSpline(scale=0.05, p=p),
             random_apply=1,
         )
 
-        p=0.5
+        p=0.99
         self.transform_intensity = ImageSequential(
-            RandomGamma(gamma=(0.5, 1.5), gain=(0.5, 1.2), p=p),
-            RandomContrast(contrast=(0.8,1.2), p=p),
-            RandomBrightness(brightness=(0.8,1.2), p=p),
+            # RandomGamma(gamma=(0.5, 1.5), gain=(0.5, 1.2), p=p),
+            RandomContrast(contrast=(0.9,1.1), p=p),
+            RandomBrightness(brightness=(0.9,1.1), p=p),
             random_apply=1,
         )
 
-        p=0.5
-        self.transform_other = ImageSequential(
+        p=0.99
+        self.transform_custom = ImageSequential(
             SameRoll(p=p), 
             SameCutout(p=p),
             random_apply=1,
@@ -163,5 +163,5 @@ class KorniaAugs(nn.Module):
         x = self.crop(x)
         x = self.transform_geometry(x)
         x = self.transform_intensity(x)
-        x = self.transform_other(x)
+        x = self.transform_custom(x)
         return x

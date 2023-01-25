@@ -6,13 +6,16 @@ from denk_baseline.augs import BaseAugs
 
 class TrainAugs(BaseAugs):
     def get_augs(self):
+        img_h = 1536
+        img_w = 960
         return A.Compose([
-            A.Resize(1024, 1024, always_apply=True),
+            A.Resize(img_h, img_w, always_apply=True),
             A.OneOf([
-                A.RandomCrop(768, 768, p=1.0),
-                A.RandomCrop(768 + 64, 768 + 64, p=1.0),
-                A.RandomCrop(768 + 128, 768 + 128, p=1.0),
-                A.RandomCrop(768 + 192, 768 + 192, p=1.0),
+                A.RandomCrop(img_h - img_h // 32, img_w - img_w // 32, p=1.0),
+                A.RandomCrop(img_h - img_h // 24, img_w - img_w // 24, p=1.0),
+                A.RandomCrop(img_h - img_h // 20, img_w - img_w // 20, p=1.0),
+                A.RandomCrop(img_h - img_h // 16, img_w - img_w // 16, p=1.0),
+                A.RandomCrop(img_h - img_h // 12, img_w - img_w // 12, p=1.0),
             ], p=0.8),
             A.ShiftScaleRotate(shift_limit=0.0, scale_limit=0.0, rotate_limit=10, p=0.5, border_mode=cv2.BORDER_REFLECT),
             A.HorizontalFlip(p=0.5),
@@ -26,5 +29,5 @@ class TrainAugs(BaseAugs):
                 # A.GridDistortion(p=1.0),
                 A.GaussianBlur(p=1.0),
             ], p=0.5),
-            A.Resize(1024, 1024, always_apply=True),
+            A.Resize(img_h, img_w, always_apply=True),
         ], p=1.0)
