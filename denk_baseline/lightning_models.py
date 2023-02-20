@@ -209,7 +209,8 @@ class ClassificationBinaryModel(ClassificationBase):
     def _common_step(self, batch, batch_idx, stage):
         with torch.autograd.set_detect_anomaly(True):
             gt_img, gt_label = batch['image'], batch['label'].float().unsqueeze(1)
-            gt_img = self.kornia_augs(gt_img)
+            if self.training:
+                gt_img = self.kornia_augs(gt_img)
             pr_label = self.model(gt_img.contiguous()).float()
 
             loss = 0

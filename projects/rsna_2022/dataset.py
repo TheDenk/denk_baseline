@@ -10,9 +10,12 @@ from denk_baseline.utils import read_image, preprocess_image
 
 
 class RSNADataset(Dataset):
-    def __init__(self, csv_path, images_dir, img_w=None, img_h=None, augs=None, mixup_proba=0.0, roi_proba=0.0, clahe_proba=0.0):
-        self.df = pd.read_csv(csv_path).reset_index() #[:1000]
+    def __init__(self, csv_path, images_dir, stage, img_w=None, img_h=None, augs=None, mixup_proba=0.0, roi_proba=0.0, clahe_proba=0.0):
+        self.df = pd.read_csv(csv_path).reset_index()[:-2]
+        # if stage == 'train':
+        #     self.df = self.df[self.df['is_additional'] == False]
         self.images_dir = images_dir
+        self.stage = stage
         self.img_w = img_w
         self.img_h = img_h
         self.augs = augs
@@ -47,7 +50,11 @@ class RSNADataset(Dataset):
     def get_item(self, index):
         img_id = self.df.iloc[index]['image_id']
         patient_id = self.df.iloc[index]['patient_id']
-        img_path = os.path.join(self.images_dir, f'{patient_id}', f'{img_id}.png')
+        if self.stage == 'train':
+            images_dir = '/media/user/FastNVME/archive/processed_images' if self.df.iloc[index]['is_additional'] else self.images_dir
+        else:
+            images_dir = self.images_dir
+        img_path = os.path.join(images_dir, f'{patient_id}', f'{img_id}.png')
         
         image = read_image(img_path).astype(np.uint8)
         

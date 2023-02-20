@@ -4,7 +4,6 @@ from functools import partial
 
 import torch
 import torch.utils.checkpoint as checkpoint
-from einops import rearrange
 from timm.models.layers import DropPath, trunc_normal_
 from torch import nn
 
@@ -181,7 +180,7 @@ class NCB(nn.Module):
     def forward(self, x):
         x = self.patch_embed(x)
         x = x + self.attention_path_dropout(self.mhca(x))
-        if not torch.onnx.is_in_onnx_export() and not self.is_bn_merged:
+        if not self.is_bn_merged:
             out = self.norm(x)
         else:
             out = x
@@ -209,6 +208,8 @@ class E_MHSA(nn.Module):
 
         self.sr_ratio = sr_ratio
         self.N_ratio = sr_ratio ** 2
+        self.sr = nn.Identity()
+        self.norm = nn.Identity()
         if sr_ratio > 1:
             self.sr = nn.AvgPool1d(kernel_size=self.N_ratio, stride=self.N_ratio)
             self.norm = nn.BatchNorm1d(dim, eps=NORM_EPS)
@@ -232,7 +233,7 @@ class E_MHSA(nn.Module):
         if self.sr_ratio > 1:
             x_ = x.transpose(1, 2)
             x_ = self.sr(x_)
-            if not torch.onnx.is_in_onnx_export() and not self.is_bn_merged:
+            if not self.is_bn_merged:
                 x_ = self.norm(x_)
             x_ = x_.transpose(1, 2)
             k = self.k(x_)
@@ -271,7 +272,7 @@ class NTB(nn.Module):
 
         self.mhsa_out_channels = _make_divisible(int(out_channels * mix_block_ratio), 32)
         self.mhca_out_channels = out_channels - self.mhsa_out_channels
-
+          
         self.patch_embed = PatchEmbed(in_channels, self.mhsa_out_channels, stride)
         self.norm1 = norm_func(self.mhsa_out_channels)
         self.e_mhsa = E_MHSA(self.mhsa_out_channels, head_dim=head_dim, sr_ratio=sr_ratio,
@@ -297,19 +298,22 @@ class NTB(nn.Module):
     def forward(self, x):
         x = self.patch_embed(x)
         B, C, H, W = x.shape
-        if not torch.onnx.is_in_onnx_export() and not self.is_bn_merged:
+        if not self.is_bn_merged:
             out = self.norm1(x)
         else:
             out = x
-        out = rearrange(out, "b c h w -> b (h w) c")  # b n c
+        
+        #out = rearrange(out, "b c h w -> b (h w) c")  # b n c
+        out = out.reshape(B, C, H*W).permute(0, 2, 1)
         out = self.mhsa_path_dropout(self.e_mhsa(out))
-        x = x + rearrange(out, "b (h w) c -> b c h w", h=H)
+        #x = x + rearrange(out, "b (h w) c -> b c h w", h=H)
+        x = x + out.permute(0, 2, 1).reshape(B, C, H, W)
 
         out = self.projection(x)
         out = out + self.mhca_path_dropout(self.mhca(out))
         x = torch.cat([x, out], dim=1)
 
-        if not torch.onnx.is_in_onnx_export() and not self.is_bn_merged:
+        if not self.is_bn_merged:
             out = self.norm2(x)
         else:
             out = x
@@ -375,7 +379,6 @@ class NextViT(nn.Module):
         )
 
         self.stage_out_idx = [sum(depths[:idx + 1]) - 1 for idx in range(len(depths))]
-        print('initialize_weights...')
         self._initialize_weights()
 
     def merge_bn(self):
@@ -401,18 +404,32 @@ class NextViT(nn.Module):
     def forward(self, x):
         x = self.stem(x)
         for idx, layer in enumerate(self.features):
-            x = layer(x)
+            # x = layer(x)
+            x = checkpoint.checkpoint(layer, x)
         x = self.norm(x)
         x = self.avgpool(x)
         x = torch.flatten(x, 1)
         x = self.proj_head(x)
         return x
 
+def load_state_dict(ckpt_path):
+    ckpt = torch.load(ckpt_path, map_location='cpu')
+
+    ignore_layers = [
+        'kornia_augs.transform_intensity.RandomContrast_0._param_generator.contrast_factor',
+        'kornia_augs.transform_intensity.RandomBrightness_1._param_generator.brightness_factor',
+    ]
+    state_dict = {}
+    for name, weights in ckpt['state_dict'].items():
+        if name in ignore_layers:
+            continue
+        state_dict[name] = weights
+    return state_dict
 
 def nextvit_small(pretrained=None, **kwargs):
     model = NextViT(stem_chs=[64, 32, 64], depths=[3, 4, 10, 3], path_dropout=0.1, **kwargs)
     if pretrained:
-        state_dict = torch.load(pretrained, map_location='cpu')['state_dict']
+        state_dict = load_state_dict(pretrained)
         model.load_state_dict(state_dict)
     return model
 
@@ -420,13 +437,13 @@ def nextvit_small(pretrained=None, **kwargs):
 def nextvit_base(pretrained=None, **kwargs):
     model = NextViT(stem_chs=[64, 32, 64], depths=[3, 4, 20, 3], path_dropout=0.2, **kwargs)
     if pretrained:
-        state_dict = torch.load(pretrained, map_location='cpu')['state_dict']
+        state_dict = load_state_dict(pretrained)
         model.load_state_dict(state_dict)
     return model
 
 def nextvit_large(pretrained=None, **kwargs):
     model = NextViT(stem_chs=[64, 32, 64], depths=[3, 4, 30, 3], path_dropout=0.2, **kwargs)
     if pretrained:
-        state_dict = torch.load(pretrained, map_location='cpu')['state_dict']
+        state_dict = load_state_dict(pretrained)
         model.load_state_dict(state_dict)
     return model

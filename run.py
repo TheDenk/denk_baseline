@@ -4,6 +4,7 @@ sys.path.append('./repositories/segmentation_models.pytorch')
 
 import os
 os.environ['TORCH_CUDNN_V8_API_ENABLED'] = '1'
+os.environ['CUDA_LAUNCH_BLOCKING'] = '1'
 from argparse import ArgumentParser
 
 from omegaconf import OmegaConf
@@ -32,7 +33,7 @@ def preprocess_config(config):
     save_dir = config['common'].get('save_dir', 'output')
     config['common']['save_path'] = os.path.join(save_dir, project_name, exp_name)
 
-    # Common params
+    # Overwrite some params
     # MAX EPOCH
     max_epochs = config['common'].get('max_epochs', False)
     if max_epochs:

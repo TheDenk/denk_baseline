@@ -125,7 +125,7 @@ class KorniaAugs(nn.Module):
             RandomVerticalFlip(p=0.5),
         )
         
-        p=0.99
+        p=0.9
         self.crop = ImageSequential(
             RandomCrop((img_h - img_h // 32, img_w - img_w // 32), p=p),
             RandomCrop((img_h - img_h // 24, img_w - img_w // 24), p=p),
@@ -135,22 +135,22 @@ class KorniaAugs(nn.Module):
             random_apply=1,
         )
 
-        p=0.99
+        p=0.9
         self.transform_geometry = ImageSequential(
-            RandomAffine(degrees=20, translate=0.05, scale=[0.95,1.05], shear=5, p=p),
-            RandomThinPlateSpline(scale=0.05, p=p),
+            RandomAffine(degrees=20, translate=0.1, scale=[0.8,1.2], shear=5, p=p),
+            RandomThinPlateSpline(scale=0.1, p=p),
             random_apply=1,
         )
 
-        p=0.99
+        p=0.9
         self.transform_intensity = ImageSequential(
             # RandomGamma(gamma=(0.5, 1.5), gain=(0.5, 1.2), p=p),
-            RandomContrast(contrast=(0.9,1.1), p=p),
-            RandomBrightness(brightness=(0.9,1.1), p=p),
+            RandomContrast(contrast=(0.8,1.2), p=p),
+            RandomBrightness(brightness=(0.8,1.2), p=p),
             random_apply=1,
         )
 
-        p=0.99
+        p=0.9
         self.transform_custom = ImageSequential(
             SameRoll(p=p), 
             SameCutout(p=p),
