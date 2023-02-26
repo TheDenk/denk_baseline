@@ -50,22 +50,20 @@ def process_img2np(image, mean=np.array([0, 0, 0]), std=np.array([1, 1, 1])):
     img = np.clip(img, 0, 255).astype(np.uint8)
     return img
     
-def preprocess_mask2onehot(image, labels, img_w=None, img_h=None, interpolation=cv2.INTER_LINEAR):
-    input_img = image.copy()
-    if img_w and img_h:
-        img = cv2.resize(input_img, (img_w, img_h), interpolation=interpolation)
-    img = np.array([(img == x) for x in labels])
-    img = np.stack(img, axis=-1).astype(np.float32)
-    img = torch.from_numpy(img).permute(2, 0, 1)
-    return img
-
-def preprocess_single_mask(image, labels, img_w=None, img_h=None, interpolation=cv2.INTER_NEAREST):
+def preprocess_mask2onehot(image, labels, to_torch=False, img_w=None, img_h=None, interpolation=cv2.INTER_LINEAR):
     img = image.copy()
     if img_w and img_h:
         img = cv2.resize(img, (img_w, img_h), interpolation=interpolation)
+    img = np.array([(img == x) for x in labels])
+    img = np.stack(img, axis=-1).astype(np.float32)
+    if to_torch:
+        img = torch.from_numpy(img).permute(2, 0, 1)
+    return img
+
+def reindex_mask(image, labels):
+    img = image.copy()
     for index, label in enumerate(labels):
         img[img == label] = index
-    img = torch.from_numpy(img)
     return img
 
 def process_multimask2np(image, labels):
