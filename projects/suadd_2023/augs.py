@@ -18,7 +18,6 @@ class TrainAugs(BaseAugs):
             A.HorizontalFlip(p=0.5),
             A.VerticalFlip(p=0.5),
             A.RandomRotate90(p=0.5),
-            A.HueSaturationValue(hue_shift_limit=30, sat_shift_limit=30, val_shift_limit=0, p=0.35),
             A.RandomBrightnessContrast(brightness_limit=0.35, contrast_limit=0.5, brightness_by_max=True, p=0.35),
             A.OneOf([
                 A.OpticalDistortion(p=0.5),

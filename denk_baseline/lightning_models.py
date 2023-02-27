@@ -101,9 +101,10 @@ class SegmentationMulticlassModel(BaseModel):
         self.use_bg = {x['name']: x.get('use_bg', True) for x in config['metrics']}
         
     def _common_step(self, batch, batch_idx, stage):
-        gt_img, sg_mask, oh_mask = batch['image'], batch['sg_mask'].long(), batch['oh_mask'].float()
+        gt_img, sg_mask, oh_mask = batch['image'], batch['sg_mask'], batch['oh_mask']
         pr_mask = self.model(gt_img.contiguous())
-
+        # print(gt_img.shape, pr_mask.shape, oh_mask.shape, sg_mask.shape)
+        
         loss = 0
         for c_name in self.criterions.keys():
             c_loss = self.criterions[c_name](pr_mask, sg_mask) * self.crit_weights[c_name]
@@ -115,7 +116,8 @@ class SegmentationMulticlassModel(BaseModel):
             metric_info = f"{m_name}_{stage}"
             index = 0 if self.use_bg[m_name] else 1
             metric_value = self.metrics[m_name](pr_mask[:, index:, :, :], oh_mask[:, index:, :, :])
-            self.log(metric_info, metric_value, on_step=False, on_epoch=True, prog_bar=True)              
+            self.log(metric_info, metric_value, on_step=False, on_epoch=True, prog_bar=True)
+
         return {
             'loss': loss,
         }

@@ -1,11 +1,12 @@
 import os
 
 import cv2
+import torch
 import numpy as np
 import pandas as pd
 from torch.utils.data import Dataset
 
-from denk_baseline.utils import read_image, preprocess_image, preprocess_mask2onehot
+from denk_baseline.utils import read_image, preprocess_image, preprocess_mask2onehot, reindex_mask
 
 
 class SUADDDataset(Dataset):
@@ -47,8 +48,7 @@ class SUADDDataset(Dataset):
                 mask = item['mask']
             
             image = cv2.resize(image, (self.img_w, self.img_h), interpolation=cv2.INTER_CUBIC)
-            mask = cv2.resize(mask, (self.img_w, self.img_h), interpolation=cv2.INTER_LINEAR)
-
+            mask = cv2.resize(mask, (self.img_w, self.img_h), interpolation=cv2.INTER_NEAREST)
 
             if i == 0:
                 r_image[0:half_h, 0:half_w] = image[0:half_h, 0:half_w].copy()
@@ -86,12 +86,16 @@ class SUADDDataset(Dataset):
         else:
             image, mask = self.get_item(index)
         
-        mean = np.array([0.485, 0.456, 0.406]) 
-        std = np.array([0.229, 0.224, 0.225])
-        image = preprocess_image(image, img_w=self.img_w, img_h=self.img_h, mean=mean, std=std)
-        mask = preprocess_mask2onehot(mask, self.labels, to_torch=True, img_w=self.img_w, img_h=self.img_h)
+        mask = cv2.resize(mask, (self.img_w, self.img_h), interpolation=cv2.INTER_NEAREST)
+        sg_mask = torch.from_numpy(reindex_mask(mask, self.labels).copy())
         
+        mean = np.array([0.5]) 
+        std = np.array([0.225])
+        image = preprocess_image(image, img_w=self.img_w, img_h=self.img_h, mean=mean, std=std)
+        oh_mask = preprocess_mask2onehot(mask, self.labels, to_torch=True, img_w=self.img_w, img_h=self.img_h)
+        # print(image.shape, oh_mask.shape, sg_mask.shape)
         return {
             'image': image, 
-            'mask': mask,
+            'oh_mask': oh_mask.float(),
+            'sg_mask': sg_mask.long(),
         }

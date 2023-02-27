@@ -35,6 +35,8 @@ def preprocess_image(image, img_w=None, img_h=None, interpolation=cv2.INTER_LINE
     img = image.copy()
     if img_w and img_h:
         img = cv2.resize(img, (img_w, img_h), interpolation=interpolation)
+    if img.ndim == 2:
+        img = img[:,:,None]
     img = ((img.astype(np.float32) / 255.0 - mean) / std).astype(np.float32)
     img = torch.from_numpy(img).permute(2, 0, 1)
     return img
