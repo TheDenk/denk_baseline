@@ -52,7 +52,7 @@ def process_img2np(image, mean=np.array([0, 0, 0]), std=np.array([1, 1, 1])):
     img = np.clip(img, 0, 255).astype(np.uint8)
     return img
     
-def preprocess_mask2onehot(image, labels, to_torch=False, img_w=None, img_h=None, interpolation=cv2.INTER_LINEAR):
+def preprocess_mask2onehot(image, labels, to_torch=False, img_w=None, img_h=None, interpolation=cv2.INTER_NEAREST):
     img = image.copy()
     if img_w and img_h:
         img = cv2.resize(img, (img_w, img_h), interpolation=interpolation)
@@ -96,8 +96,10 @@ def show_image(image, figsize=(5, 5), cmap=None, title='', xlabel=None, ylabel=N
     plt.axis(axis)
     plt.show();
     
-def show_images(images, figsize=(5, 5), title='', cmap=None, xlabel=None, ylabel=None, axis=False):
-    fig, axes = plt.subplots(1, len(images), figsize=figsize)
+def show_images(images, n_rows=1, title='', figsize=(5, 5), cmap=None, xlabel=None, ylabel=None, axis=False):
+    n_cols = len(images) // n_rows
+    _, axes = plt.subplots(n_rows, n_cols, figsize=figsize)
+    axes = axes.flatten()
     for ax, img in zip(axes, images):
         ax.imshow(img, cmap=cmap)
         ax.set_title(title)

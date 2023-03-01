@@ -212,7 +212,7 @@ class OverlapPatchEmbed(nn.Module):
 
 
 class MixVisionTransformer(nn.Module):
-    def __init__(self, img_size=224, patch_size=16, in_chans=3, num_classes=1000, embed_dims=[64, 128, 256, 512],
+    def __init__(self, img_size=224, patch_size=16, in_chans=1, num_classes=1000, embed_dims=[64, 128, 256, 512],
                  num_heads=[1, 2, 4, 8], mlp_ratios=[4, 4, 4, 4], qkv_bias=False, qk_scale=None, drop_rate=0.,
                  attn_drop_rate=0., drop_path_rate=0., norm_layer=nn.LayerNorm,
                  depths=[3, 4, 6, 3], sr_ratios=[8, 4, 2, 1]):
@@ -373,14 +373,14 @@ class mit_b0(MixVisionTransformer):
         super(mit_b0, self).__init__(
             patch_size=4, embed_dims=[32, 64, 160, 256], num_heads=[1, 2, 5, 8], mlp_ratios=[4, 4, 4, 4],
             qkv_bias=True, norm_layer=partial(nn.LayerNorm, eps=1e-6), depths=[2, 2, 2, 2], sr_ratios=[8, 4, 2, 1],
-            drop_rate=0.0, drop_path_rate=0.1)
+            drop_rate=0.0, drop_path_rate=0.1, *kwargs)
         
 class mit_b1(MixVisionTransformer):
     def __init__(self, **kwargs):
         super(mit_b1, self).__init__(
             patch_size=4, embed_dims=[64, 128, 320, 512], num_heads=[1, 2, 5, 8], mlp_ratios=[4, 4, 4, 4],
             qkv_bias=True, norm_layer=partial(nn.LayerNorm, eps=1e-6), depths=[2, 2, 2, 2], sr_ratios=[8, 4, 2, 1],
-            drop_rate=0.0, drop_path_rate=0.1)
+            drop_rate=0.0, drop_path_rate=0.1, *kwargs)
 
 class mit_b2(MixVisionTransformer):
     def __init__(self, **kwargs):
@@ -395,21 +395,21 @@ class mit_b3(MixVisionTransformer):
         super(mit_b3, self).__init__(
             patch_size=4, embed_dims=[64, 128, 320, 512], num_heads=[1, 2, 5, 8], mlp_ratios=[4, 4, 4, 4],
             qkv_bias=True, norm_layer=partial(nn.LayerNorm, eps=1e-6), depths=[3, 4, 18, 3], sr_ratios=[8, 4, 2, 1],
-            drop_rate=0.0, drop_path_rate=0.1)
+            drop_rate=0.0, drop_path_rate=0.1, *kwargs)
 
 class mit_b4(MixVisionTransformer):
     def __init__(self, **kwargs):
         super(mit_b4, self).__init__(
             patch_size=4, embed_dims=[64, 128, 320, 512], num_heads=[1, 2, 5, 8], mlp_ratios=[4, 4, 4, 4],
             qkv_bias=True, norm_layer=partial(nn.LayerNorm, eps=1e-6), depths=[3, 8, 27, 3], sr_ratios=[8, 4, 2, 1],
-            drop_rate=0.0, drop_path_rate=0.1)
+            drop_rate=0.0, drop_path_rate=0.1, *kwargs)
 
 class mit_b5(MixVisionTransformer):
     def __init__(self, **kwargs):
         super(mit_b5, self).__init__(
             patch_size=4, embed_dims=[64, 128, 320, 512], num_heads=[1, 2, 5, 8], mlp_ratios=[4, 4, 4, 4],
             qkv_bias=True, norm_layer=partial(nn.LayerNorm, eps=1e-6), depths=[3, 6, 40, 3], sr_ratios=[8, 4, 2, 1],
-            drop_rate=0.0, drop_path_rate=0.1)
+            drop_rate=0.0, drop_path_rate=0.1, *kwargs)
 
 #######################################################################################################
 ## https://github.com/lucidrains/segformer-pytorch/blob/main/segformer_pytorch/segformer_pytorch.py
@@ -421,8 +421,11 @@ class MixUpSample(nn.Module):
         self.scale_factor = scale_factor
 
     def forward(self, x):
+        dtype = x.dtype
+        x = x.to(torch.float32)
         x = self.mixing *F.interpolate(x, scale_factor=self.scale_factor, mode='bilinear', align_corners=False) \
             + (1-self.mixing )*F.interpolate(x, scale_factor=self.scale_factor, mode='nearest')
+        x = x.to(dtype)
         return x
 
 
@@ -436,7 +439,7 @@ class SegformerDecoder(nn.Module):
         self.mixing = nn.Parameter(torch.FloatTensor([0.5,0.5,0.5,0.5]))
         self.mlp = nn.ModuleList([
             nn.Sequential(
-                nn.Conv2d(dim, decoder_dim, 1, padding= 0,  bias=False), #follow mmseg to use conv-bn-relu
+                nn.Conv2d(dim, decoder_dim, 1, padding=0,  bias=False), #follow mmseg to use conv-bn-relu
                 nn.BatchNorm2d(decoder_dim),
                 nn.ReLU(inplace=True),
                 MixUpSample(2**i) if i!=0 else nn.Identity(),
@@ -459,12 +462,16 @@ class SegformerDecoder(nn.Module):
         return x, out
 
 cfg = {
+    'mit_b0': {
+        'checkpoint': './pretrain_weights/segformer.b1.1024x1024.city.160k.pth',
+        'builder':  mit_b1,
+    },
     'mit_b1': {
-        'checkpoint': './weights/segformer.b1.1024x1024.city.160k.pth',
+        'checkpoint': './pretrain_weights/segformer.b1.1024x1024.city.160k.pth',
         'builder':  mit_b1,
     },
     'mit_b2':{
-        'checkpoint': './weights/segformer.b2.1024x1024.city.160k.pth',
+        'checkpoint': './pretrain_weights/segformer.b2.1024x1024.city.160k.pth',
         'builder':  mit_b2,
     },
 }
@@ -476,15 +483,17 @@ class SegFormer(nn.Module):
         
         state_dict = {}
         for name, params in checkpoint['state_dict'].items():
+            if name in ['backbone.patch_embed1.proj.weight', ]:
+                continue
             state_dict[name.replace('backbone.', '')] = params
             
         print(self.encoder.load_state_dict(state_dict, strict=False))
 
-    def __init__(self, arch):
+    def __init__(self, arch, in_channels, classes):
         super(SegFormer, self).__init__()
         self.dropout = nn.Dropout(0.1)
         self.arch = arch
-        self.encoder = cfg[arch]['builder']()
+        self.encoder = cfg[arch]['builder'](in_chans=in_channels)
         encoder_dim = self.encoder.embed_dims
 
         self.decoder = SegformerDecoder(
@@ -492,18 +501,23 @@ class SegFormer(nn.Module):
             decoder_dim = 320,
         )
         self.logit = nn.Sequential(
-            nn.Conv2d(320, 1, kernel_size=1, padding=0),
+            nn.Conv2d(320, classes, kernel_size=1, padding=0),
         )
-        self.aux = nn.ModuleList([
-            nn.Conv2d(encoder_dim[i], 1, kernel_size=1, padding=0) for i in range(4)
-        ])
+        # self.aux = nn.ModuleList([
+        #     nn.Conv2d(encoder_dim[i], 1, kernel_size=1, padding=0) for i in range(4)
+        # ])
+
+        self.load_pretrain()
 
     def forward(self, x):
         encoder = self.encoder(x)
         last, _ = self.decoder(encoder)
         last  = self.dropout(last)
         logit = self.logit(last)
+        dtype = logit.dtype
+        logit = logit.to(torch.float32)
         logit = F.interpolate(logit, size=None, scale_factor=4, mode='bilinear', align_corners=False)
+        logit = logit.to(dtype)
         return logit
 
 

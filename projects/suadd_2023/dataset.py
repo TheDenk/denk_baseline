@@ -42,10 +42,10 @@ class SUADDDataset(Dataset):
             image = read_image(img_path, to_rgb=False, flag=cv2.IMREAD_GRAYSCALE)
             mask = read_image(msk_path, to_rgb=False, flag=cv2.IMREAD_GRAYSCALE)
             
-            if self.augs is not None:
-                item = self.augs(image=image, mask=mask)
-                image = item['image']
-                mask = item['mask']
+            # if self.augs is not None:
+            #     item = self.augs(image=image, mask=mask)
+            #     image = item['image']
+            #     mask = item['mask']
             
             image = cv2.resize(image, (self.img_w, self.img_h), interpolation=cv2.INTER_CUBIC)
             mask = cv2.resize(mask, (self.img_w, self.img_h), interpolation=cv2.INTER_NEAREST)
@@ -88,12 +88,12 @@ class SUADDDataset(Dataset):
         
         mask = cv2.resize(mask, (self.img_w, self.img_h), interpolation=cv2.INTER_NEAREST)
         sg_mask = torch.from_numpy(reindex_mask(mask, self.labels).copy())
-        
+
         mean = np.array([0.5]) 
         std = np.array([0.225])
         image = preprocess_image(image, img_w=self.img_w, img_h=self.img_h, mean=mean, std=std)
         oh_mask = preprocess_mask2onehot(mask, self.labels, to_torch=True, img_w=self.img_w, img_h=self.img_h)
-        # print(image.shape, oh_mask.shape, sg_mask.shape)
+        
         return {
             'image': image, 
             'oh_mask': oh_mask.float(),
