@@ -6,7 +6,9 @@ import os
 os.environ['TORCH_CUDNN_V8_API_ENABLED'] = '1'
 os.environ['CUDA_LAUNCH_BLOCKING'] = '1'
 from argparse import ArgumentParser
+import glob
 
+import torch
 from omegaconf import OmegaConf
 from pytorch_lightning import seed_everything
 
@@ -21,10 +23,12 @@ def parse_args():
     args = parser.parse_args()
     return args
 
+
 def save_config(config):
     os.makedirs(config['common']['save_path'], exist_ok=True)
     with open(f"{config['common']['save_path']}/config.yaml", 'w') as file:
         OmegaConf.save(config=config, f=file)
+
 
 def preprocess_config(config):
     # Right exp dir
@@ -88,6 +92,7 @@ def preprocess_config(config):
     
     return config
 
+
 def parse_loggers(config):
     str_loggers = config.get('loggers', [])
     loggers = {}
@@ -112,6 +117,7 @@ def parse_loggers(config):
 
     return loggers if len(loggers) else None
 
+
 def run_experiment(config):
     config = preprocess_config(config)
     save_config(config)
@@ -127,6 +133,26 @@ def run_experiment(config):
 
     trainer.fit(model, datamodule) 
     # if 'wandb' in loggers: loggers['wandb']._experiment.finish()
+    extract_models(model, config) # remove lightning prefix
+
+
+def extract_models(model, config):
+    ckpt_paths = glob.glob(config['common']['save_path'] + '/*.ckpt')
+    ckpt_paths = list(sorted(ckpt_paths))
+    model = model.cpu()
+
+    for ckpt_path in ckpt_paths:
+        model.load_state_dict(torch.load(ckpt_path, map_location='cpu')['state_dict'])
+        
+        state_dict = {}
+        m_dict = model.state_dict()
+        for name in m_dict:
+            state_dict[name.replace('model.', '')] = m_dict[name]
+        
+        torch.save({
+            'state_dict': state_dict,
+        }, ckpt_path)
+
 
 def make_test(config):
     config = preprocess_config(config)
