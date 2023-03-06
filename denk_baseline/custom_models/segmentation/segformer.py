@@ -212,7 +212,7 @@ class OverlapPatchEmbed(nn.Module):
 
 
 class MixVisionTransformer(nn.Module):
-    def __init__(self, img_size=224, patch_size=16, in_chans=1, num_classes=1000, embed_dims=[64, 128, 256, 512],
+    def __init__(self, img_size=224, patch_size=16, in_chans=3, num_classes=1000, embed_dims=[64, 128, 256, 512],
                  num_heads=[1, 2, 4, 8], mlp_ratios=[4, 4, 4, 4], qkv_bias=False, qk_scale=None, drop_rate=0.,
                  attn_drop_rate=0., drop_path_rate=0., norm_layer=nn.LayerNorm,
                  depths=[3, 4, 6, 3], sr_ratios=[8, 4, 2, 1]):
@@ -373,21 +373,21 @@ class mit_b0(MixVisionTransformer):
         super(mit_b0, self).__init__(
             patch_size=4, embed_dims=[32, 64, 160, 256], num_heads=[1, 2, 5, 8], mlp_ratios=[4, 4, 4, 4],
             qkv_bias=True, norm_layer=partial(nn.LayerNorm, eps=1e-6), depths=[2, 2, 2, 2], sr_ratios=[8, 4, 2, 1],
-            drop_rate=0.0, drop_path_rate=0.1, *kwargs)
+            drop_rate=0.0, drop_path_rate=0.1, **kwargs)
         
 class mit_b1(MixVisionTransformer):
     def __init__(self, **kwargs):
         super(mit_b1, self).__init__(
             patch_size=4, embed_dims=[64, 128, 320, 512], num_heads=[1, 2, 5, 8], mlp_ratios=[4, 4, 4, 4],
             qkv_bias=True, norm_layer=partial(nn.LayerNorm, eps=1e-6), depths=[2, 2, 2, 2], sr_ratios=[8, 4, 2, 1],
-            drop_rate=0.0, drop_path_rate=0.1, *kwargs)
+            drop_rate=0.0, drop_path_rate=0.1, **kwargs)
 
 class mit_b2(MixVisionTransformer):
     def __init__(self, **kwargs):
         super(mit_b2, self).__init__(
             patch_size=4, embed_dims=[64, 128, 320, 512], num_heads=[1, 2, 5, 8], mlp_ratios=[4, 4, 4, 4],
             qkv_bias=True, norm_layer=partial(nn.LayerNorm, eps=1e-6), depths=[3, 4, 6, 3], sr_ratios=[8, 4, 2, 1],
-            drop_rate=0.0, drop_path_rate=0.1)
+            drop_rate=0.0, drop_path_rate=0.1, **kwargs)
 
         
 class mit_b3(MixVisionTransformer):
@@ -395,21 +395,21 @@ class mit_b3(MixVisionTransformer):
         super(mit_b3, self).__init__(
             patch_size=4, embed_dims=[64, 128, 320, 512], num_heads=[1, 2, 5, 8], mlp_ratios=[4, 4, 4, 4],
             qkv_bias=True, norm_layer=partial(nn.LayerNorm, eps=1e-6), depths=[3, 4, 18, 3], sr_ratios=[8, 4, 2, 1],
-            drop_rate=0.0, drop_path_rate=0.1, *kwargs)
+            drop_rate=0.0, drop_path_rate=0.1, **kwargs)
 
 class mit_b4(MixVisionTransformer):
     def __init__(self, **kwargs):
         super(mit_b4, self).__init__(
             patch_size=4, embed_dims=[64, 128, 320, 512], num_heads=[1, 2, 5, 8], mlp_ratios=[4, 4, 4, 4],
             qkv_bias=True, norm_layer=partial(nn.LayerNorm, eps=1e-6), depths=[3, 8, 27, 3], sr_ratios=[8, 4, 2, 1],
-            drop_rate=0.0, drop_path_rate=0.1, *kwargs)
+            drop_rate=0.0, drop_path_rate=0.1, **kwargs)
 
 class mit_b5(MixVisionTransformer):
     def __init__(self, **kwargs):
         super(mit_b5, self).__init__(
             patch_size=4, embed_dims=[64, 128, 320, 512], num_heads=[1, 2, 5, 8], mlp_ratios=[4, 4, 4, 4],
             qkv_bias=True, norm_layer=partial(nn.LayerNorm, eps=1e-6), depths=[3, 6, 40, 3], sr_ratios=[8, 4, 2, 1],
-            drop_rate=0.0, drop_path_rate=0.1, *kwargs)
+            drop_rate=0.0, drop_path_rate=0.1, **kwargs)
 
 #######################################################################################################
 ## https://github.com/lucidrains/segformer-pytorch/blob/main/segformer_pytorch/segformer_pytorch.py
@@ -463,8 +463,8 @@ class SegformerDecoder(nn.Module):
 
 cfg = {
     'mit_b0': {
-        'checkpoint': './pretrain_weights/segformer.b1.1024x1024.city.160k.pth',
-        'builder':  mit_b1,
+        'checkpoint': './pretrain_weights/segformer.b0.768x768.city.160k.pth',
+        'builder':  mit_b0,
     },
     'mit_b1': {
         'checkpoint': './pretrain_weights/segformer.b1.1024x1024.city.160k.pth',
@@ -472,9 +472,25 @@ cfg = {
     },
     'mit_b2':{
         'checkpoint': './pretrain_weights/segformer.b2.1024x1024.city.160k.pth',
+        # 'checkpoint': './output/tested_models/segformerb2-768-768-0-no-aug-in-mixup/last.ckpt',
         'builder':  mit_b2,
     },
 }
+
+def load_state_dict(ckpt_path):
+    ckpt = torch.load(ckpt_path, map_location='cpu')
+
+    state_dict = {}
+    for name, weights in ckpt['state_dict'].items():
+        state_dict[name] = weights
+    return state_dict
+
+def get_segformer(arch, in_channels, num_classes, pretrained=None, **kwargs):
+    model = SegFormer(arch, in_channels, num_classes)
+    if pretrained:
+        state_dict = load_state_dict(pretrained)
+        model.load_state_dict(state_dict)
+    return model
 
 class SegFormer(nn.Module):
     def load_pretrain(self):
@@ -489,7 +505,7 @@ class SegFormer(nn.Module):
             
         print(self.encoder.load_state_dict(state_dict, strict=False))
 
-    def __init__(self, arch, in_channels, classes):
+    def __init__(self, arch, in_channels, num_classes):
         super(SegFormer, self).__init__()
         self.dropout = nn.Dropout(0.1)
         self.arch = arch
@@ -501,7 +517,7 @@ class SegFormer(nn.Module):
             decoder_dim = 320,
         )
         self.logit = nn.Sequential(
-            nn.Conv2d(320, classes, kernel_size=1, padding=0),
+            nn.Conv2d(320, num_classes, kernel_size=1, padding=0),
         )
         # self.aux = nn.ModuleList([
         #     nn.Conv2d(encoder_dim[i], 1, kernel_size=1, padding=0) for i in range(4)
