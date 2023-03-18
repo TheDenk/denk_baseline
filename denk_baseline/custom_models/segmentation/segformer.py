@@ -436,7 +436,7 @@ class SegformerDecoder(nn.Module):
             decoder_dim = 256,
     ):
         super().__init__()
-        self.mixing = nn.Parameter(torch.FloatTensor([0.5,0.5,0.5,0.5]))
+        self.mixing = nn.Parameter(torch.FloatTensor([0.5, 0.5, 0.5, 0.5]))
         self.mlp = nn.ModuleList([
             nn.Sequential(
                 nn.Conv2d(dim, decoder_dim, 1, padding=0,  bias=False), #follow mmseg to use conv-bn-relu
@@ -475,13 +475,28 @@ cfg = {
         # 'checkpoint': './output/tested_models/segformerb2-768-768-0-no-aug-in-mixup/last.ckpt',
         'builder':  mit_b2,
     },
+    'mit_b3': {
+        'checkpoint': './pretrain_weights/segformer.b3.1024x1024.city.160k.pth',
+        'builder':  mit_b3,
+    },
+    'mit_b4': {
+        'checkpoint': './pretrain_weights/segformer.b4.1024x1024.city.160k.pth',
+        'builder':  mit_b4,
+    },
+    'mit_b5':{
+        'checkpoint': './pretrain_weights/segformer.b5.640x640.ade.160k.pth',
+        # 'checkpoint': './output/tested_models/segformerb2-768-768-0-no-aug-in-mixup/last.ckpt',
+        'builder':  mit_b5,
+    },
 }
 
 def load_state_dict(ckpt_path):
     ckpt = torch.load(ckpt_path, map_location='cpu')
-
+    ignore_layers = ['encoder.patch_embed1.proj.weight', 'encoder.patch_embed1.proj.weight']
     state_dict = {}
     for name, weights in ckpt['state_dict'].items():
+        if name in ignore_layers:
+            continue
         state_dict[name] = weights
     return state_dict
 
@@ -489,7 +504,7 @@ def get_segformer(arch, in_channels, num_classes, pretrained=None, **kwargs):
     model = SegFormer(arch, in_channels, num_classes)
     if pretrained:
         state_dict = load_state_dict(pretrained)
-        model.load_state_dict(state_dict)
+        _ = model.load_state_dict(state_dict, strict=False)
     return model
 
 class SegFormer(nn.Module):

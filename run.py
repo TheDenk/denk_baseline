@@ -103,7 +103,7 @@ def parse_loggers(config):
                 **params,
                 'name': config['common'].get('project_name', 'proj0'),
                 'version': config['common'].get('exp_name', 'exp0'),
-                'save_dir': 'output',
+                'save_dir': config['common'].get('save_dir', 'output'),
             }
             loggers['tensorboard'] = instantiate_from_config(str_logger)
         elif 'WandbLogger' in str_logger['target']:
@@ -111,7 +111,7 @@ def parse_loggers(config):
                 **params,
                 'name': config['common'].get('exp_name', 'exp0'),
                 'project': config['common'].get('project_name', 'proj0'),
-                'save_dir': 'output',
+                'save_dir': config['common'].get('save_dir', 'output'),
             }
             loggers['wandb'] = instantiate_from_config(str_logger)
 
