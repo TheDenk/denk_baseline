@@ -160,7 +160,7 @@ def make_test(config):
     datamodule = DataModule(config)
     model = get_obj_from_str(config['lightning_model'])(config)
     loggers = parse_loggers(config)
-    trainer = get_obj_from_str(config['trainer']['target'])(logger=[v for _, v in loggers.items()], **config['trainer']['params'])
+    trainer = get_obj_from_str(config['trainer']['target'])(logger=[v for _, v in loggers.items()] if loggers else None, **config['trainer']['params'])
     trainer.test(model, datamodule=datamodule)
 
 
