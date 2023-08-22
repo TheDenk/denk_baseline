@@ -1,7 +1,6 @@
---find-links https://download.pytorch.org/whl/torch_stable.html
-torch==1.12.1+cu116
-torchvision==0.13.1+cu116
-torchaudio==0.12.1
+torch
+torchvision
+torchaudio
 gdown==4.5.1
 pytorch_lightning==1.6.5
 omegaconf==2.2.2
