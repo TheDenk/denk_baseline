@@ -1,5 +1,6 @@
 import torch
-from sklearn.metrics import roc_auc_score, precision_score, recall_score, f1_score
+import numpy as np
+from sklearn.metrics import roc_auc_score, precision_score, recall_score, f1_score, confusion_matrix
 
 
 class BaseMetric:
@@ -12,9 +13,9 @@ class BaseMetric:
         raise NotImplementedError()
 
     def __call__(self, y_pred, y_true):
-        if self.from_logits:
-            y_pred = torch.sigmoid(y_pred)
-        y_pred = (y_pred > self.threshold).numpy().astype(int)
+        # if self.from_logits:
+        #     y_pred = torch.sigmoid(y_pred)
+        y_pred = y_pred.numpy()
         y_true = y_true.numpy()
         m_value = self.calculate(y_true, y_pred, **self.kwargs)
         return m_value or 0.0
@@ -38,6 +39,18 @@ class Recall(BaseMetric):
 class F1Score(BaseMetric):
     def calculate(self, y_true, y_pred, **kwargs):
         return f1_score(y_true, y_pred, **self.kwargs)
+
+
+class MeanAccuracyScore(BaseMetric):
+    def calculate(self, y_true, y_pred, **kwargs):
+        conf_matrix = confusion_matrix(y_pred=y_pred, y_true=y_true, labels=list(range(1024)))
+
+        cls_cnt = conf_matrix.sum(axis=1) 
+        cls_hit = np.diag(conf_matrix)
+
+        metrics = [hit / cnt if cnt else 0.0 for cnt, hit in zip(cls_cnt, cls_hit)]
+        mean_class_acc = np.mean(metrics)
+        return mean_class_acc
 
 
 class PFScore:

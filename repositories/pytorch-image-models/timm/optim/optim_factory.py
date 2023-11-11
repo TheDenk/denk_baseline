@@ -1,7 +1,7 @@
 """ Optimizer Factory w/ Custom Weight Decay
 Hacked together by / Copyright 2021 Ross Wightman
 """
-import json
+import logging
 from itertools import islice
 from typing import Optional, Callable, Tuple
 
@@ -9,27 +9,33 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 
-from timm.models.helpers import group_parameters
+from timm.models import group_parameters
 
 from .adabelief import AdaBelief
 from .adafactor import Adafactor
 from .adahessian import Adahessian
 from .adamp import AdamP
+from .adan import Adan
 from .lamb import Lamb
 from .lars import Lars
+from .lion import Lion
 from .lookahead import Lookahead
 from .madgrad import MADGRAD
 from .nadam import Nadam
+from .nadamw import NAdamW
 from .nvnovograd import NvNovoGrad
 from .radam import RAdam
 from .rmsprop_tf import RMSpropTF
 from .sgdp import SGDP
 
-try:
-    from apex.optimizers import FusedNovoGrad, FusedAdam, FusedLAMB, FusedSGD
-    has_apex = True
-except ImportError:
-    has_apex = False
+
+_logger = logging.getLogger(__name__)
+
+
+# optimizers to default to multi-tensor
+_DEFAULT_FOREACH = {
+    'lion',
+}
 
 
 def param_groups_weight_decay(
@@ -92,6 +98,7 @@ def param_groups_layer_decay(
         no_weight_decay_list: Tuple[str] = (),
         layer_decay: float = .75,
         end_layer_decay: Optional[float] = None,
+        verbose: bool = False,
 ):
     """
     Parameter groups for layer-wise lr decay & weight decay
@@ -142,8 +149,9 @@ def param_groups_layer_decay(
         param_group_names[group_name]["param_names"].append(name)
         param_groups[group_name]["params"].append(param)
 
-    # FIXME temporary output to debug new feature
-    print("parameter groups: \n%s" % json.dumps(param_group_names, indent=2))
+    if verbose:
+        import json
+        _logger.info("parameter groups: \n%s" % json.dumps(param_group_names, indent=2))
 
     return list(param_groups.values())
 
@@ -156,7 +164,8 @@ def optimizer_kwargs(cfg):
         opt=cfg.opt,
         lr=cfg.lr,
         weight_decay=cfg.weight_decay,
-        momentum=cfg.momentum)
+        momentum=cfg.momentum,
+    )
     if getattr(cfg, 'opt_eps', None) is not None:
         kwargs['eps'] = cfg.opt_eps
     if getattr(cfg, 'opt_betas', None) is not None:
@@ -165,6 +174,8 @@ def optimizer_kwargs(cfg):
         kwargs['layer_decay'] = cfg.layer_decay
     if getattr(cfg, 'opt_args', None) is not None:
         kwargs.update(cfg.opt_args)
+    if getattr(cfg, 'opt_foreach', None) is not None:
+        kwargs['foreach'] = cfg.opt_foreach
     return kwargs
 
 
@@ -185,10 +196,12 @@ def create_optimizer_v2(
         lr: Optional[float] = None,
         weight_decay: float = 0.,
         momentum: float = 0.9,
+        foreach: Optional[bool] = None,
         filter_bias_and_bn: bool = True,
         layer_decay: Optional[float] = None,
         param_group_fn: Optional[Callable] = None,
-        **kwargs):
+        **kwargs,
+):
     """ Create an optimizer.
 
     TODO currently the model is passed in and all parameters are selected for optimization.
@@ -202,6 +215,7 @@ def create_optimizer_v2(
         lr: initial learning rate
         weight_decay: weight decay to apply in optimizer
         momentum:  momentum for momentum based optimizers (others may use betas via kwargs)
+        foreach: Enable / disable foreach (multi-tensor) operation if True / False. Choose safe default if None
         filter_bias_and_bn:  filter out bias, bn and other 1d params from weight decay
         **kwargs: extra optimizer specific kwargs to pass through
 
@@ -221,7 +235,8 @@ def create_optimizer_v2(
                 model_or_params,
                 weight_decay=weight_decay,
                 layer_decay=layer_decay,
-                no_weight_decay_list=no_weight_decay)
+                no_weight_decay_list=no_weight_decay,
+            )
             weight_decay = 0.
         elif weight_decay and filter_bias_and_bn:
             parameters = param_groups_weight_decay(model_or_params, weight_decay, no_weight_decay)
@@ -235,12 +250,33 @@ def create_optimizer_v2(
     opt_lower = opt.lower()
     opt_split = opt_lower.split('_')
     opt_lower = opt_split[-1]
-    if 'fused' in opt_lower:
+
+    if opt_lower.startswith('fused'):
+        try:
+            from apex.optimizers import FusedNovoGrad, FusedAdam, FusedLAMB, FusedSGD
+            has_apex = True
+        except ImportError:
+            has_apex = False
         assert has_apex and torch.cuda.is_available(), 'APEX and CUDA required for fused optimizers'
 
+    if opt_lower.startswith('bnb'):
+        try:
+            import bitsandbytes as bnb
+            has_bnb = True
+        except ImportError:
+            has_bnb = False
+        assert has_bnb and torch.cuda.is_available(), 'bitsandbytes and CUDA required for bnb optimizers'
+
     opt_args = dict(weight_decay=weight_decay, **kwargs)
+
     if lr is not None:
         opt_args.setdefault('lr', lr)
+
+    if foreach is None:
+        if opt in _DEFAULT_FOREACH:
+            opt_args.setdefault('foreach', True)
+    else:
+        opt_args['foreach'] = foreach
 
     # basic SGD & related
     if opt_lower == 'sgd' or opt_lower == 'nesterov':
@@ -266,6 +302,8 @@ def create_optimizer_v2(
             optimizer = optim.Nadam(parameters, **opt_args)
         except AttributeError:
             optimizer = Nadam(parameters, **opt_args)
+    elif opt_lower == 'nadamw':
+        optimizer = NAdamW(parameters, **opt_args)
     elif opt_lower == 'radam':
         optimizer = RAdam(parameters, **opt_args)
     elif opt_lower == 'adamax':
@@ -281,6 +319,10 @@ def create_optimizer_v2(
         optimizer = optim.Adagrad(parameters, **opt_args)
     elif opt_lower == 'adafactor':
         optimizer = Adafactor(parameters, **opt_args)
+    elif opt_lower == 'adanp':
+        optimizer = Adan(parameters, no_prox=False, **opt_args)
+    elif opt_lower == 'adanw':
+        optimizer = Adan(parameters, no_prox=True, **opt_args)
     elif opt_lower == 'lamb':
         optimizer = Lamb(parameters, **opt_args)
     elif opt_lower == 'lambc':
@@ -303,6 +345,9 @@ def create_optimizer_v2(
         optimizer = optim.RMSprop(parameters, alpha=0.9, momentum=momentum, **opt_args)
     elif opt_lower == 'rmsproptf':
         optimizer = RMSpropTF(parameters, alpha=0.9, momentum=momentum, **opt_args)
+    elif opt_lower == 'lion':
+        opt_args.pop('eps', None)
+        optimizer = Lion(parameters, **opt_args)
 
     # second order
     elif opt_lower == 'adahessian':
@@ -324,6 +369,40 @@ def create_optimizer_v2(
     elif opt_lower == 'fusednovograd':
         opt_args.setdefault('betas', (0.95, 0.98))
         optimizer = FusedNovoGrad(parameters, **opt_args)
+
+    # bitsandbytes optimizers, require bitsandbytes to be installed
+    elif opt_lower == 'bnbsgd':
+        opt_args.pop('eps', None)
+        optimizer = bnb.optim.SGD(parameters, momentum=momentum, nesterov=True, **opt_args)
+    elif opt_lower == 'bnbsgd8bit':
+        opt_args.pop('eps', None)
+        optimizer = bnb.optim.SGD8bit(parameters, momentum=momentum, nesterov=True, **opt_args)
+    elif opt_lower == 'bnbmomentum':
+        opt_args.pop('eps', None)
+        optimizer = bnb.optim.SGD(parameters, momentum=momentum, **opt_args)
+    elif opt_lower == 'bnbmomentum8bit':
+        opt_args.pop('eps', None)
+        optimizer = bnb.optim.SGD8bit(parameters, momentum=momentum, **opt_args)
+    elif opt_lower == 'bnbadam':
+        optimizer = bnb.optim.Adam(parameters, **opt_args)
+    elif opt_lower == 'bnbadam8bit':
+        optimizer = bnb.optim.Adam8bit(parameters, **opt_args)
+    elif opt_lower == 'bnbadamw':
+        optimizer = bnb.optim.AdamW(parameters, **opt_args)
+    elif opt_lower == 'bnbadamw8bit':
+        optimizer = bnb.optim.AdamW8bit(parameters, **opt_args)
+    elif opt_lower == 'bnblamb':
+        optimizer = bnb.optim.LAMB(parameters, **opt_args)
+    elif opt_lower == 'bnblamb8bit':
+        optimizer = bnb.optim.LAMB8bit(parameters, **opt_args)
+    elif opt_lower == 'bnblars':
+        optimizer = bnb.optim.LARS(parameters, **opt_args)
+    elif opt_lower == 'bnblarsb8bit':
+        optimizer = bnb.optim.LAMB8bit(parameters, **opt_args)
+    elif opt_lower == 'bnblion':
+        optimizer = bnb.optim.Lion(parameters, **opt_args)
+    elif opt_lower == 'bnblion8bit':
+        optimizer = bnb.optim.Lion8bit(parameters, **opt_args)
 
     else:
         assert False and "Invalid optimizer"

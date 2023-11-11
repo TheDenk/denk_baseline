@@ -10,17 +10,17 @@ class DataModule(pl.LightningDataModule):
         self.config = config
 
         self.train = instantiate_from_config(config['datasets']['train'])
-        if self.train.augs: self.train.augs = get_obj_from_str(self.train.augs)()
+        if hasattr(self.train, 'augs'): self.train.augs = get_obj_from_str(self.train.augs)()
 
-        self. valid = config['datasets'].get('valid', False)
+        self.valid = config['datasets'].get('valid', False)
         if self.valid:
             self.valid = instantiate_from_config(config['datasets']['valid'])
-            if self.valid.augs: self.valid.augs = get_obj_from_str(self.valid.augs)()
+            if hasattr(self.valid, 'augs'): self.valid.augs = get_obj_from_str(self.valid.augs)()
 
         self.test = config['datasets'].get('test', False)
         if self.test:
             self.test = instantiate_from_config(config['datasets']['test'])
-            if self.test.augs: self.test.augs = get_obj_from_str(self.test.augs)()
+            if hasattr(self.test, 'augs'): self.test.augs = get_obj_from_str(self.test.augs)()
 
     def train_dataloader(self):
         loader_params = self.config['dataloaders']['train']['params']

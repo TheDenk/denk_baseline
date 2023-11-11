@@ -147,7 +147,9 @@ def extract_models(model, config):
         state_dict = {}
         m_dict = model.state_dict()
         for name in m_dict:
-            state_dict[name.replace('model.', '')] = m_dict[name]
+            if 'batch_augs' in name:
+                continue
+            state_dict[name[6:]] = m_dict[name]
         
         torch.save({
             'state_dict': state_dict,
@@ -160,7 +162,7 @@ def make_test(config):
     datamodule = DataModule(config)
     model = get_obj_from_str(config['lightning_model'])(config)
     loggers = parse_loggers(config)
-    trainer = get_obj_from_str(config['trainer']['target'])(logger=[v for _, v in loggers.items()] if loggers else None, **config['trainer']['params'])
+    trainer = get_obj_from_str(config['trainer']['target'])(logger=[v for _, v in loggers.items()], **config['trainer']['params'])
     trainer.test(model, datamodule=datamodule)
 
 

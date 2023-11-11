@@ -12,11 +12,11 @@ class BaseModel(pl.LightningModule):
         if self.config['model'].get('weights', False):
             self.model = self.load_checkpoint(self.config['model']['weights'])
 
-        self.kornia_augs = config.get('kornia_augs', False)
-        if self.kornia_augs:
-            self.kornia_augs = instantiate_from_config(self.kornia_augs)
+        self.batch_augs = config.get('batch_augs', False)
+        if self.batch_augs:
+            self.batch_augs = instantiate_from_config(self.batch_augs)
         else:
-            self.kornia_augs = torch.nn.Identity()
+            self.batch_augs = torch.nn.Identity()
         
         self.criterions = {x['name']: instantiate_from_config(x) for x in config['criterions']}
         self.crit_weights = {x['name']: x['weight'] for x in config['criterions']}
@@ -149,22 +149,22 @@ class SegmentationBinaryModel(BaseModel):
 class ClassificationBase(BaseModel):
     def __init__(self, config):
         super().__init__(config)
-        self.predict_values = {
+        self.metric_values = {
             x: {'gt': [], 'pr': []} for x in ['train', 'valid', 'test']
         }
 
     def on_validation_epoch_start(self):
-        self.predict_values['valid'] = {'gt': [], 'pr': []}
+        self.metric_values['valid'] = {'gt': [], 'pr': []}
     
     def on_train_epoch_start(self):
-        self.predict_values['train'] = {'gt': [], 'pr': []}
+        self.metric_values['train'] = {'gt': [], 'pr': []}
 
     def on_test_epoch_start(self):
-        self.predict_values['test'] = {'gt': [], 'pr': []}    
+        self.metric_values['test'] = {'gt': [], 'pr': []}    
     
     def calculate_metrics(self, stage):
-        gt = self.predict_values[stage]['gt']
-        pr = self.predict_values[stage]['pr']
+        gt = self.metric_values[stage]['gt']
+        pr = self.metric_values[stage]['pr']
         
         metrics = self.config.get('metrics', [])
         for m_info in metrics:
@@ -212,7 +212,7 @@ class ClassificationBinaryModel(ClassificationBase):
         with torch.autograd.set_detect_anomaly(True):
             gt_img, gt_label = batch['image'], batch['label'].float().unsqueeze(1)
             if self.training:
-                gt_img = self.kornia_augs(gt_img)
+                gt_img = self.batch_augs(gt_img)
             pr_label = self.model(gt_img.contiguous()).float()
 
             loss = 0
@@ -222,8 +222,8 @@ class ClassificationBinaryModel(ClassificationBase):
                 loss += c_loss
             self.log(f'total_loss_{stage}', loss, on_step=False, on_epoch=True, prog_bar=True)
             
-            self.predict_values[stage]['pr'].append(pr_label.cpu().detach().squeeze())
-            self.predict_values[stage]['gt'].append(gt_label.cpu().detach().squeeze().long())
+            self.metric_values[stage]['pr'].append(pr_label.cpu().detach().squeeze())
+            self.metric_values[stage]['gt'].append(gt_label.cpu().detach().squeeze().long())
 
         return {
             'loss': loss,
@@ -235,19 +235,54 @@ class ClassificationMulticlassModel(ClassificationBase):
         super().__init__(config)
 
     def _common_step(self, batch, batch_idx, stage):
-        gt_img, gt_label, oh_label = batch['image'], batch['label'].long(), batch['oh_label'].long()
+        gt_img, gt_label, oh_label = batch['image'], batch['label'].long(), batch['oh_label']
         pr_label = self.model(gt_img.contiguous()).float()
         
         loss = 0
         for c_name in self.criterions.keys():
-            c_loss = self.criterions[c_name](pr_label, gt_label) * self.crit_weights[c_name]
+            c_loss = self.criterions[c_name](pr_label, oh_label) * self.crit_weights[c_name]
             self.log(f"{c_name}_loss_{stage}", c_loss, on_epoch=True, prog_bar=True)
             loss += c_loss
         self.log(f"total_loss_{stage}", loss, on_step=False, on_epoch=True, prog_bar=True)
         
-        self.predict_values[stage]['pr'].append(pr_label.cpu().detach())
-        self.predict_values[stage]['gt'].append(oh_label.cpu().detach())         
+        self.metric_values[stage]['pr'].append(pr_label.cpu().detach().argmax(dim=1))
+        self.metric_values[stage]['gt'].append(oh_label.cpu().argmax(dim=1))   
+
+        # if stage == 'valid' and self.current_epoch >= 20:
+        #     for pr, label, gt in zip(pr_label.cpu().detach(), gt_label, oh_label.cpu()):
+        #         print(f'{pr} {label} {gt}')      
+        # if self.current_epoch == 8:
+        #     self.model.unfreeze_mvit_blocks()
+
         return {
             'loss': loss,
         }
         
+class ClassificationMulticlassDistillationModel(ClassificationBase):
+    def __init__(self, config):
+        super().__init__(config)
+
+    def _common_step(self, batch, batch_idx, stage):
+        gt_img, gt_label, oh_label = batch['image'], batch['label'].long(), batch['oh_label']
+        pr_label = self.model(gt_img.contiguous())
+        # pr_label = [x.float() for x in pr_label]
+        
+        loss = 0
+        for c_name in self.criterions.keys():
+            c_loss = self.criterions[c_name](gt_img, pr_label, gt_label) * self.crit_weights[c_name]
+            self.log(f"{c_name}_loss_{stage}", c_loss, on_epoch=True, prog_bar=True)
+            loss += c_loss
+        self.log(f"total_loss_{stage}", loss, on_step=False, on_epoch=True, prog_bar=True)
+        
+        if hasattr(self.model, 'with_two_heads') and self.model.with_two_heads:
+            pr_label = [x.cpu().detach() for x in pr_label]
+            pr_label = ((pr_label[0] + pr_label[1]) / 2).argmax(dim=1)
+        else:
+            pr_label = pr_label.cpu().detach().argmax(dim=1)
+
+        self.metric_values[stage]['pr'].append(pr_label)
+        self.metric_values[stage]['gt'].append(oh_label.cpu().argmax(dim=1))   
+    
+        return {
+            'loss': loss,
+        }

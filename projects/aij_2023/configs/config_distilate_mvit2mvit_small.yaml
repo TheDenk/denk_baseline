@@ -1,0 +1,150 @@
+# python run.py --config=./projects/aij_2023/config_distilate_mvit2mvit_small.yaml
+
+common:
+  exp_name: distilate-mse-mvit-custom-32-2-alphabet-easy-augs
+  project_name: aij_2023
+  save_dir: output
+  seed: 17
+  max_epochs: 64
+  batch_size: 4 
+  num_workers: 16 
+
+loggers:
+- target: pytorch_lightning.loggers.WandbLogger
+- target: pytorch_lightning.loggers.TensorBoardLogger
+
+lightning_model: denk_baseline.lightning_models.ClassificationMulticlassDistillationModel
+
+trainer:
+  target: pytorch_lightning.Trainer
+  params:
+    devices: [0]
+    max_epochs: 128
+    accelerator: gpu
+    precision: bf16
+
+model:
+  target: projects.aij_2023.models.mvit.model.MViTModel
+  params:
+    num_classes: 1001
+    backbone_channels: 3
+    head_channels: 768
+    with_two_heads: true
+    arch: 
+      embed_dims: 96
+      num_layers: 12
+      num_heads: 1
+      downscale_indices: [1, 3, 11]
+
+criterions:
+- target: denk_baseline.losses.DistillationLossTwoHeads
+  params:
+    config:
+      criterion:
+        target: torch.nn.CrossEntropyLoss
+      teacher_model: 
+        target: projects.aij_2023.models.mvit.model.MViTModel
+        params:
+          num_classes: 1001
+          ckpt_path: ./pretrain_weights/mvit32.2_small_state_dict.pt  
+      distillation_type: mse
+      alpha: 0.75
+      tau: 1.0
+  weight: 1.0
+  name: distilation
+
+optimizers:
+- target: torch.optim.AdamW
+  params:
+    lr: 0.003
+    weight_decay: 0.05
+  scheduler:
+    target: pl_bolts.optimizers.lr_scheduler.LinearWarmupCosineAnnealingLR
+    params:
+      warmup_epochs: 2
+      max_epochs: 128
+      warmup_start_lr: 0.0001
+      eta_min: 0.00005
+    additional:
+      monitor: f1score_valid
+    
+metrics:
+- target: torchmetrics.Precision
+  name: precision
+  params:
+    num_classes: 1001
+    task: multiclass
+    average: macro
+- target: torchmetrics.Recall
+  name: recall
+  params:
+    num_classes: 1001
+    task: multiclass
+    average: macro
+- target: torchmetrics.F1Score
+  name: f1score
+  params:
+    num_classes: 1001
+    task: multiclass
+    average: macro
+- target: denk_baseline.metrics.MeanAccuracyScore
+  name: mascore
+
+callbacks:
+- target: pytorch_lightning.callbacks.LearningRateMonitor
+- target: pytorch_lightning.callbacks.ModelCheckpoint
+  params:
+    filename: best_f1score-{epoch:03d}-{f1score_valid:3.3f}-{precision_valid:3.3f}-{recall_valid:3.3f}-{total_loss_valid:3.3f}
+    monitor: f1score_valid
+    mode: max
+    save_top_k: 3
+    save_last: false
+    save_weights_only: false
+
+datasets:
+  train:
+    target: projects.aij_2023.dataset.TrainVideoDataset
+    params:
+      csv_path: projects/aij_2023/data/train_18.csv
+      json_path: projects/aij_2023/data/classes.json
+      video_folder: /home/user/datasets/slovo/video
+      min_side: 256
+      sample_size: 224 
+      sample_stride: 2 
+      sample_n_frames: 32
+      start_delta: 4
+      augs_proba: easy
+      use_dwt: false
+  valid:
+    target: projects.aij_2023.dataset.ValidVideoDataset
+    params:
+      csv_path: projects/aij_2023/data/test_18.csv
+      json_path: projects/aij_2023/data/classes.json
+      video_folder: /home/user/datasets/slovo/video
+      min_side: 256
+      sample_size: 224 
+      sample_stride: 2 
+      sample_n_frames: 32
+      use_dwt: false
+
+dataloaders:
+  train:
+    target: torch.utils.data.DataLoader
+    params:
+      shuffle: false
+      batch_size: 32
+      num_workers: 16
+      drop_last: false
+      pin_memory: true
+    sampler: 
+      target: torch.utils.data.RandomSampler
+  valid:
+    target: torch.utils.data.DataLoader
+    params:
+      shuffle: false
+      batch_size: 32
+      num_workers: 16
+      drop_last: false
+      pin_memory: true
+    sampler: 
+      target: torch.utils.data.SequentialSampler
