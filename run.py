@@ -1,10 +1,4 @@
-import sys
-sys.path.append('./repositories/pytorch-image-models')
-sys.path.append('./repositories/segmentation_models.pytorch')
-
 import os
-os.environ['TORCH_CUDNN_V8_API_ENABLED'] = '1'
-os.environ['CUDA_LAUNCH_BLOCKING'] = '1'
 from argparse import ArgumentParser
 import glob
 
@@ -25,71 +19,16 @@ def parse_args():
 
 
 def save_config(config):
-    os.makedirs(config['common']['save_path'], exist_ok=True)
-    with open(f"{config['common']['save_path']}/config.yaml", 'w') as file:
+    os.makedirs(config['general']['save_path'], exist_ok=True)
+    with open(f"{config['general']['save_path']}/config.yaml", 'w') as file:
         OmegaConf.save(config=config, f=file)
 
 
 def preprocess_config(config):
-    # Right exp dir
-    exp_name = config['common'].get('exp_name', 'exp0')
-    project_name = config['common'].get('project_name', 'proj0')
-    save_dir = config['common'].get('save_dir', 'output')
-    config['common']['save_path'] = os.path.join(save_dir, project_name, exp_name)
-
-    # Overwrite some params
-    # MAX EPOCH
-    max_epochs = config['common'].get('max_epochs', False)
-    if max_epochs:
-        config['trainer']['params']['max_epochs'] = max_epochs
-        
-        for opt_index, _ in enumerate(config['optimizers']):
-            sch = config['optimizers'][opt_index].get('scheduler', False)
-            if  sch and 'LinearWarmupCosineAnnealingLR' in sch['target']:
-                config['optimizers'][opt_index]['scheduler']['params']['max_epochs'] = max_epochs
-
-    # IMG_SIZE
-    img_size = config['common'].get('img_size', False)
-    if img_size:
-        for stage in ['train', 'valid', 'test']:
-            if stage not in config['datasets']:
-                continue
-            for side in ['img_h', 'img_w']:
-                config['datasets'][stage]['params'][side] = img_size
-        
-        if config.get('kornia_augs', False):
-            for side in ['img_h', 'img_w']:
-                config['kornia_augs']['params'][side] = img_size
-    
-    # IMG_H AND IMG_W
-    for side in ['img_h', 'img_w']:
-        img_side = config['common'].get(side, False)
-        if img_side:
-            for stage in ['train', 'valid', 'test']:
-                if stage not in config['datasets']:
-                    continue
-                config['datasets'][stage]['params'][side] = img_side
-            
-            if config.get('kornia_augs', False):
-                for side in ['img_h', 'img_w']:
-                    config['kornia_augs']['params'][side] = img_side
-
-    # BATCH_SIZE
-    batch_size = config['common'].get('batch_size', False)
-    if batch_size:
-        for stage in ['train', 'valid', 'test']:
-            if stage not in config['datasets']:
-                continue
-            config['dataloaders'][stage]['params']['batch_size'] = batch_size
-
-    # NUM_WORKERS
-    num_workers = config['common'].get('num_workers', False)
-    if num_workers:
-        for stage in ['train', 'valid', 'test']:
-            if stage not in config['datasets']:
-                continue
-            config['dataloaders'][stage]['params']['num_workers'] = num_workers
-    
+    exp_name = config['general'].get('exp_name', 'noname_experiment')
+    project_name = config['general'].get('project_name', 'noname_project')
+    save_dir = config['general'].get('save_dir', 'noname_project_output')
+    config['general']['save_path'] = os.path.join(save_dir, project_name, exp_name)
     return config
 
 
@@ -101,19 +40,22 @@ def parse_loggers(config):
         if 'TensorBoardLogger' in str_logger['target']:
             str_logger['params'] = {
                 **params,
-                'name': config['common'].get('project_name', 'proj0'),
-                'version': config['common'].get('exp_name', 'exp0'),
-                'save_dir': config['common'].get('save_dir', 'output'),
+                'name': config['general'].get('project_name', 'proj0'),
+                'version': config['general'].get('exp_name', 'exp0'),
+                'save_dir': config['general'].get('save_dir', 'output'),
             }
             loggers['tensorboard'] = instantiate_from_config(str_logger)
         elif 'WandbLogger' in str_logger['target']:
             str_logger['params'] = {
                 **params,
-                'name': config['common'].get('exp_name', 'exp0'),
-                'project': config['common'].get('project_name', 'proj0'),
-                'save_dir': config['common'].get('save_dir', 'output'),
+                'name': config['general'].get('exp_name', 'exp0'),
+                'project': config['general'].get('project_name', 'proj0'),
+                'save_dir': config['general'].get('save_dir', 'output'),
             }
             loggers['wandb'] = instantiate_from_config(str_logger)
+        elif 'clearml' in str_logger['target']:
+            from clearml import Task
+            _ = Task.init(**str_logger['params'])
 
     return loggers if len(loggers) else None
 
@@ -123,7 +65,7 @@ def run_experiment(config):
     save_config(config)
     print(OmegaConf.to_yaml(config))
     
-    seed_everything(config['common']['seed'], workers=True)
+    seed_everything(config['general']['seed'], workers=True)
 
     datamodule = DataModule(config)
     model = get_obj_from_str(config['lightning_model'])(config)
@@ -137,7 +79,7 @@ def run_experiment(config):
 
 
 def extract_models(model, config):
-    ckpt_paths = glob.glob(config['common']['save_path'] + '/*.ckpt')
+    ckpt_paths = glob.glob(config['general']['save_path'] + '/*.ckpt')
     ckpt_paths = list(sorted(ckpt_paths))
     model = model.cpu()
 
@@ -156,9 +98,9 @@ def extract_models(model, config):
         }, ckpt_path)
 
 
-def make_test(config):
+def do_test(config):
     config = preprocess_config(config)
-    seed_everything(config['common']['seed'], workers=True)
+    seed_everything(config['general']['seed'], workers=True)
     datamodule = DataModule(config)
     model = get_obj_from_str(config['lightning_model'])(config)
     loggers = parse_loggers(config)

@@ -59,7 +59,7 @@ class BaseModel(pl.LightningModule):
                     **item['scheduler'].get('params', {}))
                 schedulers.append({
                     'scheduler':scheduler,
-                    **item['scheduler']['additional'],
+                    # **item['scheduler']['additional'],
                 })
         return optimizers, schedulers
     
@@ -71,7 +71,7 @@ class BaseModel(pl.LightningModule):
             if 'ModelCheckpoint' in item['target']:
                 item['params'] = {
                     **params,
-                    'dirpath': self.config['common']['save_path'],
+                    'dirpath': self.config['general']['save_path'],
                 }
 
             callback = instantiate_from_config(item)
