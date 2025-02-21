@@ -21,16 +21,18 @@ class DefectoscopyClassificationDataset(Dataset):
         min_df_size=256,
         is_train=False,
         dilate_kernel=None,
+        is_multiclass=False,
     ):
         defects_csv_paths = glob.glob(os.path.join(defects_csv_dir, "*.csv"))
         nondefects_csv_paths = glob.glob(os.path.join(nondefects_csv_dir, "*.csv"))
-        defects_csv_paths = defects_csv_paths[:-50] if is_train else defects_csv_paths[-50:]
-        nondefects_csv_paths = nondefects_csv_paths[:-50] if is_train else nondefects_csv_paths[-50:]
+        defects_csv_paths = defects_csv_paths[:-100] if is_train else defects_csv_paths[-100:]
+        nondefects_csv_paths = nondefects_csv_paths[:-100] if is_train else nondefects_csv_paths[-100:]
 
         self.dataframes = self.read_csv_files(defects_csv_paths, 1, min_df_size) + self.read_csv_files(nondefects_csv_paths, 0, min_df_size)
         random.shuffle(self.dataframes)
         
         self.window_size = window_size
+        self.is_multiclass = is_multiclass
         self.transforms = get_train_transform() if is_train else get_valid_transform()
         self.dilate_kernel = dilate_kernel
         self.length = len(self.dataframes)
@@ -49,14 +51,21 @@ class DefectoscopyClassificationDataset(Dataset):
         df, label = self.dataframes[idx]
         sample = construct(df)
         sample = np.concatenate([np.expand_dims(sample[:, :642], -1), np.expand_dims(sample[:, 642:], -1)], axis=2)
-        if self.dilate_kernel:
-            kernel = np.ones(self.dilate_kernel, dtype=np.float32)
-            sample = cv2.filter2D(sample.astype(np.float32), -1, kernel)
+        # if self.dilate_kernel:
+        # kernel = np.ones(self.dilate_kernel, dtype=np.float32)
+        # sample = cv2.filter2D(sample.astype(np.float32), -1, kernel)
+
         sample = torch.from_numpy(sample).permute(2, 0, 1) / 15.0
+        bg = torch.zeros(2, 642, 642, dtype=torch.float32)
+        bg[:, :min(sample.shape[1], 642), :] = sample[:, :min(sample.shape[1], 642), :]
         if self.transforms:
-            sample = self.transforms(sample)
+            bg = self.transforms(bg)
         
-        return {"image": sample, "label": label}
+        return {
+            "image": bg, 
+            "label": 1 - label, 
+            "oh_label": torch.tensor([1, 0], dtype=torch.float32) if self.is_multiclass else torch.tensor([0, 1], dtype=torch.float32),
+        }
 
 
 def get_train_transform():
@@ -64,12 +73,15 @@ def get_train_transform():
         # v2.RandomCrop(size=(200, 512), p=0.7),
         v2.RandomHorizontalFlip(p=0.5),
         v2.RandomRotation(degrees=(-5, 5)),
-        v2.Resize([210, 642]),
+        v2.Resize([642, 642]),
     ])
+    # return transforms
     return transforms
 
 def get_valid_transform():
     transforms = v2.Compose([
-        v2.Resize([210, 642]),
+        v2.Resize([642, 642]),
     ])
     return transforms
+    # return None
+

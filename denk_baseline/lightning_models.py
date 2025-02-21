@@ -108,15 +108,15 @@ class SegmentationMulticlassModel(BaseModel):
         loss = 0
         for c_name in self.criterions.keys():
             c_loss = self.criterions[c_name](pr_mask, sg_mask) * self.crit_weights[c_name]
-            self.log(f"{c_name}_loss_{stage}", c_loss, on_step=False, on_epoch=True, prog_bar=True)
+            self.log(f"{c_name}_loss_{stage}", c_loss, on_step=False, on_epoch=True, prog_bar=True, sync_dist=True)
             loss += c_loss
-        self.log(f"total_loss_{stage}", loss, on_step=False, on_epoch=True, prog_bar=True)
+        self.log(f"total_loss_{stage}", loss, on_step=False, on_epoch=True, prog_bar=True, sync_dist=True)
 
         for m_name in self.metrics.keys():
             metric_info = f"{m_name}_{stage}"
             index = 0 if self.use_bg[m_name] else 1
             metric_value = self.metrics[m_name](pr_mask[:, index:, :, :], oh_mask[:, index:, :, :])
-            self.log(metric_info, metric_value, on_step=False, on_epoch=True, prog_bar=True)
+            self.log(metric_info, metric_value, on_step=False, on_epoch=True, prog_bar=True, sync_dist=True)
 
         return {
             'loss': loss,
@@ -134,14 +134,14 @@ class SegmentationBinaryModel(BaseModel):
         loss = 0
         for c_name in self.criterions.keys():
             c_loss = self.criterions[c_name](pr_mask, gt_mask) * self.crit_weights[c_name]
-            self.log(f"{c_name}_loss_{stage}", c_loss, on_epoch=True, prog_bar=True)
+            self.log(f"{c_name}_loss_{stage}", c_loss, on_epoch=True, prog_bar=True, sync_dist=True)
             loss += c_loss
-        self.log(f"total_loss_{stage}", loss, on_step=False, on_epoch=True, prog_bar=True)
+        self.log(f"total_loss_{stage}", loss, on_step=False, on_epoch=True, prog_bar=True, sync_dist=True)
 
         for m_name in self.metrics.keys():
             metric_info = f"{m_name}_{stage}"
             metric_value = self.metrics[m_name](pr_mask, gt_mask)
-            self.log(metric_info, metric_value, on_step=False, on_epoch=True, prog_bar=True)              
+            self.log(metric_info, metric_value, on_step=False, on_epoch=True, prog_bar=True, sync_dist=True)              
         return {
             'loss': loss,
         }
@@ -171,7 +171,7 @@ class ClassificationBase(BaseModel):
             m_name = m_info['name']
             metric = instantiate_from_config(m_info)
             metric_value = metric(torch.cat(pr), torch.cat(gt))
-            self.log(f'{m_name}_{stage}', metric_value, on_step=False, on_epoch=True, prog_bar=True)
+            self.log(f'{m_name}_{stage}', metric_value, on_step=False, on_epoch=True, prog_bar=True, sync_dist=True)
 
         metrics_thresholds = self.config.get('metrics_thresholds', False)
         if metrics_thresholds:
@@ -193,9 +193,9 @@ class ClassificationBase(BaseModel):
             for metric_name, metric_info in metrics_thresholds['metrics'].items():
                 metric = get_obj_from_str(metric_info['target'])(**metric_info.get('params', {}), threshold=best_thres)
                 metric_value = metric(torch.cat(pr), torch.cat(gt))
-                self.log(f'{metric_name}_{stage}', metric_value, on_step=False, on_epoch=True, prog_bar=True)
+                self.log(f'{metric_name}_{stage}', metric_value, on_step=False, on_epoch=True, prog_bar=True, sync_dist=True)
 
-            self.log(f'{stage}_best_threshold', best_thres, on_step=False, on_epoch=True, prog_bar=True)
+            self.log(f'{stage}_best_threshold', best_thres, on_step=False, on_epoch=True, prog_bar=True, sync_dist=True)
 
     def on_validation_epoch_end(self):
         self.calculate_metrics('valid')
@@ -218,9 +218,9 @@ class ClassificationBinaryModel(ClassificationBase):
             loss = 0
             for c_name in self.criterions.keys():
                 c_loss = self.criterions[c_name](pr_label, gt_label) * self.crit_weights[c_name]
-                self.log(f'{c_name}_loss_{stage}', c_loss, on_epoch=True, prog_bar=True)
+                self.log(f'{c_name}_loss_{stage}', c_loss, on_epoch=True, prog_bar=True, sync_dist=True)
                 loss += c_loss
-            self.log(f'total_loss_{stage}', loss, on_step=False, on_epoch=True, prog_bar=True)
+            self.log(f'total_loss_{stage}', loss, on_step=False, on_epoch=True, prog_bar=True, sync_dist=True)
             
             self.metric_values[stage]['pr'].append(pr_label.cpu().detach().squeeze())
             self.metric_values[stage]['gt'].append(gt_label.cpu().detach().squeeze().long())
@@ -241,9 +241,9 @@ class ClassificationMulticlassModel(ClassificationBase):
         loss = 0
         for c_name in self.criterions.keys():
             c_loss = self.criterions[c_name](pr_label, oh_label) * self.crit_weights[c_name]
-            self.log(f"{c_name}_loss_{stage}", c_loss, on_epoch=True, prog_bar=True)
+            self.log(f"{c_name}_loss_{stage}", c_loss, on_epoch=True, prog_bar=True, sync_dist=True)
             loss += c_loss
-        self.log(f"total_loss_{stage}", loss, on_step=False, on_epoch=True, prog_bar=True)
+        self.log(f"total_loss_{stage}", loss, on_step=False, on_epoch=True, prog_bar=True, sync_dist=True)
         
         self.metric_values[stage]['pr'].append(pr_label.cpu().detach().argmax(dim=1))
         self.metric_values[stage]['gt'].append(oh_label.cpu().argmax(dim=1))   
@@ -270,9 +270,9 @@ class ClassificationMulticlassDistillationModel(ClassificationBase):
         loss = 0
         for c_name in self.criterions.keys():
             c_loss = self.criterions[c_name](gt_img, pr_label, gt_label) * self.crit_weights[c_name]
-            self.log(f"{c_name}_loss_{stage}", c_loss, on_epoch=True, prog_bar=True)
+            self.log(f"{c_name}_loss_{stage}", c_loss, on_epoch=True, prog_bar=True, sync_dist=True)
             loss += c_loss
-        self.log(f"total_loss_{stage}", loss, on_step=False, on_epoch=True, prog_bar=True)
+        self.log(f"total_loss_{stage}", loss, on_step=False, on_epoch=True, prog_bar=True, sync_dist=True)
         
         if hasattr(self.model, 'with_two_heads') and self.model.with_two_heads:
             pr_label = [x.cpu().detach() for x in pr_label]

@@ -1,4 +1,4 @@
-# python run.py --config=./projects/defectoscopy/config_baseline.yaml
+# python run.py --config=./projects/defectoscopy/config_binary_baseline.yaml
 
 general:
   exp_name: effnet-3-debug
@@ -22,7 +22,7 @@ lightning_model: denk_baseline.lightning_models.ClassificationBinaryModel
 trainer:
   target: pytorch_lightning.Trainer
   params:
-    devices: [0]
+    devices: [1, 2]
     max_epochs: ${general.max_epochs}
     accelerator: gpu
     precision: bf16
@@ -43,14 +43,14 @@ criterions:
 optimizers:
 - target: torch.optim.AdamW
   params:
-    lr: 0.001
-    weight_decay: 0.00001
+    lr: 0.003
+    weight_decay: 0.0001
   scheduler:
     target: denk_baseline.lr_scheduler.LinearWarmupCosineAnnealingLR
     params:
       warmup_epochs: 16
       max_epochs: ${general.max_epochs}
-      warmup_start_lr: 0.00001
+      warmup_start_lr: 0.0001
       eta_min: 0.00001
     
 metrics:
@@ -83,8 +83,8 @@ datasets:
   train:
     target: projects.defectoscopy.dataset.DefectoscopyClassificationDataset
     params: &dataset_params
-      defects_csv_dir: ""
-      nondefects_csv_dir: ""
+      defects_csv_dir: /home/raid/datasets/defectoscopy/defects
+      nondefects_csv_dir: /home/raid/datasets/defectoscopy/not_defects
       window_size: 512
       min_df_size: 256
       is_train: True
