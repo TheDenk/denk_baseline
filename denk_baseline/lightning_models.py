@@ -11,12 +11,6 @@ class BaseModel(pl.LightningModule):
         self.model = instantiate_from_config(config['model'])
         if self.config['model'].get('weights', False):
             self.model = self.load_checkpoint(self.config['model']['weights'])
-
-        self.batch_augs = config.get('batch_augs', False)
-        if self.batch_augs:
-            self.batch_augs = instantiate_from_config(self.batch_augs)
-        else:
-            self.batch_augs = torch.nn.Identity()
         
         self.criterions = {x['name']: instantiate_from_config(x) for x in config['criterions']}
         self.crit_weights = {x['name']: x['weight'] for x in config['criterions']}
@@ -211,8 +205,6 @@ class ClassificationBinaryModel(ClassificationBase):
     def _common_step(self, batch, batch_idx, stage):
         with torch.autograd.set_detect_anomaly(True):
             gt_img, gt_label = batch['image'], batch['label'].float().unsqueeze(1)
-            if self.training:
-                gt_img = self.batch_augs(gt_img)
             pr_label = self.model(gt_img.contiguous()).float()
 
             loss = 0
@@ -248,16 +240,29 @@ class ClassificationMulticlassModel(ClassificationBase):
         self.metric_values[stage]['pr'].append(pr_label.cpu().detach().argmax(dim=1))
         self.metric_values[stage]['gt'].append(oh_label.cpu().argmax(dim=1))   
 
-        # if stage == 'valid' and self.current_epoch >= 20:
-        #     for pr, label, gt in zip(pr_label.cpu().detach(), gt_label, oh_label.cpu()):
-        #         print(f'{pr} {label} {gt}')      
-        # if self.current_epoch == 8:
-        #     self.model.unfreeze_mvit_blocks()
+        return {
+            'loss': loss,
+        }
+
+
+class ClassificationMulticlassWithModelLoss(ClassificationBase):
+    def __init__(self, config):
+        super().__init__(config)
+
+    def _common_step(self, batch, batch_idx, stage):
+        gt_img, gt_label, oh_label = batch['image'], batch['label'].long(), batch['oh_label']
+        loss, pr_label = self.model(gt_img.contiguous(), labels=oh_label)
+        self.log(f"total_loss_{stage}", loss, on_step=False, on_epoch=True, prog_bar=True)
+        # print(pr_label.shape)
+        # print(pr_label.shape, oh_label.shape)
+        oh_label = oh_label.mean(1)
+        self.metric_values[stage]['pr'].append(pr_label.cpu().detach().argmax(dim=1))
+        self.metric_values[stage]['gt'].append(oh_label.cpu().argmax(dim=1))   
 
         return {
             'loss': loss,
         }
-        
+    
 class ClassificationMulticlassDistillationModel(ClassificationBase):
     def __init__(self, config):
         super().__init__(config)
