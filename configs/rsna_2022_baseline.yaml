@@ -1,0 +1,102 @@
+general:
+  exp_name: rsna_baseline
+  project_name: rsna_2022
+  save_dir: outputs
+  seed: 42
+  batch_size: 32
+  num_workers: 4
+  img_w: 960
+  img_h: 1536
+
+lightning_model: denk_baseline.lightning_models.ClassificationBinaryModel
+
+model:
+  target: torchvision.models.resnet50
+  params:
+    pretrained: true
+    num_classes: 1
+
+criterions:
+  - target: torch.nn.BCEWithLogitsLoss
+    weight: 1.0
+    name: bce
+
+optimizers:
+  - target: torch.optim.AdamW
+    params:
+      lr: 1e-4
+      weight_decay: 0.01
+    scheduler:
+      target: torch.optim.lr_scheduler.OneCycleLR
+      params:
+        max_lr: 1e-3
+        epochs: 10
+        steps_per_epoch: 1000
+
+trainer:
+  target: pytorch_lightning.Trainer
+  params:
+    max_epochs: 10
+    accelerator: gpu
+    devices: 1
+    precision: 16
+
+callbacks:
+  - target: pytorch_lightning.callbacks.ModelCheckpoint
+    params:
+      monitor: total_loss_valid
+      mode: min
+      save_top_k: 3
+  - target: pytorch_lightning.callbacks.EarlyStopping
+    params:
+      monitor: total_loss_valid
+      patience: 3
+      mode: min
+
+loggers:
+  - target: pytorch_lightning.loggers.TensorBoardLogger
+    params:
+      log_graph: true
+  - target: pytorch_lightning.loggers.WandbLogger
+    params:
+      log_model: true
+
+datasets:
+  train:
+    target: projects.rsna_2022.dataset.RSNADataset
+    params:
+      csv_path: data/rsna_2022/train.csv
+      images_dir: data/rsna_2022/images
+      stage: train
+      img_w: ${general.img_w}
+      img_h: ${general.img_h}
+      augs: projects.rsna_2022.augs.TrainAugs
+      mixup_proba: 0.0
+      roi_proba: 0.0
+      clahe_proba: 0.0
+  valid:
+    target: projects.rsna_2022.dataset.RSNADataset
+    params:
+      csv_path: data/rsna_2022/valid.csv
+      images_dir: data/rsna_2022/images
+      stage: valid
+      img_w: ${general.img_w}
+      img_h: ${general.img_h}
+
+dataloaders:
+  train:
+    target: torch.utils.data.DataLoader
+    params: &dataloader_params
+      shuffle: false
+      batch_size: ${general.batch_size}
+      num_workers: ${general.num_workers}
+      drop_last: false
+      pin_memory: true
+    sampler:
+      target: torch.utils.data.RandomSampler
+  valid:
+    target: torch.utils.data.DataLoader
+    params:
+      <<: *dataloader_params
+    sampler:
+      target: torch.utils.data.SequentialSampler

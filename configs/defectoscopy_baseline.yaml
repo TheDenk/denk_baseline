@@ -1,0 +1,112 @@
+general:
+  exp_name: defectoscopy_baseline
+  project_name: defectoscopy
+  save_dir: outputs
+  seed: 42
+  max_epochs: 128
+  batch_size: 64
+  num_workers: 16
+
+lightning_model: denk_baseline.lightning_models.ClassificationBinaryModel
+
+model:
+  target: projects.defectoscopy.model.CustomModel
+  params:
+    model_name: efficientnet_b3
+    in_chans: 2
+    num_classes: 1
+    pretrained: true
+
+criterions:
+  - target: torch.nn.BCEWithLogitsLoss
+    weight: 1.0
+    name: bce
+
+optimizers:
+  - target: torch.optim.AdamW
+    params:
+      lr: 0.003
+      weight_decay: 0.0001
+    scheduler:
+      target: denk_baseline.lr_scheduler.LinearWarmupCosineAnnealingLR
+      params:
+        warmup_epochs: 16
+        max_epochs: ${general.max_epochs}
+        warmup_start_lr: 0.0001
+        eta_min: 0.00001
+
+metrics:
+  - target: torchmetrics.Precision
+    name: precision
+    params: &torchmetrics_params
+      num_classes: 1
+      task: binary
+  - target: torchmetrics.Recall
+    name: recall
+    params:
+      <<: *torchmetrics_params
+  - target: torchmetrics.F1Score
+    name: f1score
+    params:
+      <<: *torchmetrics_params
+
+trainer:
+  target: pytorch_lightning.Trainer
+  params:
+    max_epochs: ${general.max_epochs}
+    accelerator: gpu
+    devices: 1
+    precision: bf16
+
+callbacks:
+  - target: pytorch_lightning.callbacks.LearningRateMonitor
+  - target: pytorch_lightning.callbacks.ModelCheckpoint
+    params:
+      filename: best_f1score-{epoch:03d}-{f1score_valid:3.3f}-{precision_valid:3.3f}-{recall_valid:3.3f}-{total_loss_valid:3.3f}
+      monitor: f1score_valid
+      mode: max
+      save_top_k: 3
+      save_last: false
+      save_weights_only: false
+
+loggers:
+  - target: pytorch_lightning.loggers.TensorBoardLogger
+    params:
+      log_graph: true
+  - target: pytorch_lightning.loggers.WandbLogger
+    params:
+      log_model: true
+
+datasets:
+  train:
+    target: projects.defectoscopy.dataset.DefectoscopyClassificationDataset
+    params: &dataset_params
+      defects_csv_dir: data/defectoscopy/defects
+      nondefects_csv_dir: data/defectoscopy/not_defects
+      window_size: 512
+      min_df_size: 256
+      is_train: true
+      is_multiclass: false
+  valid:
+    target: projects.defectoscopy.dataset.DefectoscopyClassificationDataset
+    params:
+      <<: *dataset_params
+      is_train: false
+
+dataloaders:
+  train:
+    target: torch.utils.data.DataLoader
+    params: &dataloader_params
+      shuffle: false
+      batch_size: ${general.batch_size}
+      num_workers: ${general.num_workers}
+      drop_last: false
+      pin_memory: true
+    sampler:
+      target: torch.utils.data.RandomSampler
+  valid:
+    target: torch.utils.data.DataLoader
+    params:
+      <<: *dataloader_params
+    sampler:
+      target: torch.utils.data.SequentialSampler

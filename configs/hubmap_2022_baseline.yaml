@@ -1,0 +1,113 @@
+general:
+  exp_name: hubmap_baseline
+  project_name: hubmap_2022
+  save_dir: outputs
+  seed: 42
+  batch_size: 16
+  num_workers: 4
+  img_w: 512
+  img_h: 512
+
+lightning_model: denk_baseline.lightning_models.SegmentationBinaryModel
+
+model:
+  target: segmentation_models_pytorch.Unet
+  params:
+    encoder_name: resnet34
+    encoder_weights: imagenet
+    in_channels: 3
+    classes: 1
+
+criterions:
+  - target: denk_baseline.losses.DiceBCELoss
+    params:
+      dice_weight: 0.5
+      bce_weight: 0.5
+    weight: 1.0
+    name: dice_bce
+
+metrics:
+  - target: denk_baseline.metrics.DiceCoef
+    name: dice
+    params:
+      threshold: 0.5
+
+optimizers:
+  - target: torch.optim.AdamW
+    params:
+      lr: 1e-4
+      weight_decay: 0.01
+    scheduler:
+      target: torch.optim.lr_scheduler.CosineAnnealingLR
+      params:
+        T_max: 10
+        eta_min: 1e-6
+
+trainer:
+  target: pytorch_lightning.Trainer
+  params:
+    max_epochs: 10
+    accelerator: gpu
+    devices: 1
+    precision: 16
+
+callbacks:
+  - target: pytorch_lightning.callbacks.ModelCheckpoint
+    params:
+      monitor: dice_valid
+      mode: max
+      save_top_k: 3
+  - target: pytorch_lightning.callbacks.EarlyStopping
+    params:
+      monitor: dice_valid
+      patience: 3
+      mode: max
+
+loggers:
+  - target: pytorch_lightning.loggers.TensorBoardLogger
+    params:
+      log_graph: true
+  - target: pytorch_lightning.loggers.WandbLogger
+    params:
+      log_model: true
+
+datasets:
+  train:
+    target: projects.hubmap_2022.dataset.HubmapDataset
+    params:
+      images_dir: data/hubmap_2022/images
+      masks_dir: data/hubmap_2022/masks
+      csv_path: data/hubmap_2022/train.csv
+      stage: train
+      img_w: ${general.img_w}
+      img_h: ${general.img_h}
+      augs: projects.hubmap_2022.augs.TrainAugs
+      labels: [0, 1]
+  valid:
+    target: projects.hubmap_2022.dataset.HubmapDataset
+    params:
+      images_dir: data/hubmap_2022/images
+      masks_dir: data/hubmap_2022/masks
+      csv_path: data/hubmap_2022/valid.csv
+      stage: valid
+      img_w: ${general.img_w}
+      img_h: ${general.img_h}
+      labels: [0, 1]
+
+dataloaders:
+  train:
+    target: torch.utils.data.DataLoader
+    params: &dataloader_params
+      shuffle: false
+      batch_size: ${general.batch_size}
+      num_workers: ${general.num_workers}
+      drop_last: false
+      pin_memory: true
+    sampler:
+      target: torch.utils.data.RandomSampler
+  valid:
+    target: torch.utils.data.DataLoader
+    params:
+      <<: *dataloader_params
+    sampler:
+      target: torch.utils.data.SequentialSampler

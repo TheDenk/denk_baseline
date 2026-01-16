@@ -64,6 +64,50 @@ class FocalWithLogitsThird(nn.Module):
         return loss.mean()
 
 
+class DiceBCELoss(nn.Module):
+    def __init__(self, dice_weight=0.5, bce_weight=0.5, smooth=1.0):
+        super().__init__()
+        self.dice_weight = dice_weight
+        self.bce_weight = bce_weight
+        self.smooth = smooth
+
+    def forward(self, logits, targets):
+        targets = targets.float()
+        probs = torch.sigmoid(logits)
+        dims = tuple(range(2, targets.ndim))
+        intersection = (probs * targets).sum(dim=dims)
+        union = probs.sum(dim=dims) + targets.sum(dim=dims)
+        dice_loss = 1 - ((2 * intersection + self.smooth) / (union + self.smooth))
+        dice_loss = dice_loss.mean()
+        bce_loss = F.binary_cross_entropy_with_logits(logits, targets)
+        return self.dice_weight * dice_loss + self.bce_weight * bce_loss
+
+
+class FocalDiceLoss(nn.Module):
+    def __init__(self, dice_weight=0.5, focal_weight=0.5, gamma=2.0, alpha=0.25, smooth=1.0):
+        super().__init__()
+        self.dice_weight = dice_weight
+        self.focal_weight = focal_weight
+        self.gamma = gamma
+        self.alpha = alpha
+        self.smooth = smooth
+
+    def forward(self, logits, targets):
+        targets = targets.float()
+        bce = F.binary_cross_entropy_with_logits(logits, targets, reduction='none')
+        probs = torch.sigmoid(logits)
+        pt = torch.where(targets == 1, probs, 1 - probs)
+        focal_loss = (self.alpha * (1 - pt) ** self.gamma * bce).mean()
+
+        dims = tuple(range(2, targets.ndim))
+        intersection = (probs * targets).sum(dim=dims)
+        union = probs.sum(dim=dims) + targets.sum(dim=dims)
+        dice_loss = 1 - ((2 * intersection + self.smooth) / (union + self.smooth))
+        dice_loss = dice_loss.mean()
+
+        return self.dice_weight * dice_loss + self.focal_weight * focal_loss
+
+
 class LDAMLoss(nn.Module):
     def __init__(self, cls_num_list, max_m=0.5, s=30, device='cuda:0'):
         super(LDAMLoss, self).__init__()

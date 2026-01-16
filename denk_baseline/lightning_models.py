@@ -77,13 +77,13 @@ class BaseModel(pl.LightningModule):
         if 'state_dict' in ckpt:
             ckpt = ckpt['state_dict']
 
-        if 'ignore_layers' in ckpt:
+        ignore_layers = set(config.get('ignore_layers', []))
+        if ignore_layers:
             state_dict = {}
             for name, params in ckpt.items():
-                if name in config['ignore_layers']:
+                if name in ignore_layers:
                     continue
                 state_dict[name] = params
-
             print('LOAD MODEL: ', self.load_state_dict(state_dict, strict=False))
         else:
             print('LOAD MODEL: ', self.load_state_dict(ckpt, strict=False))
@@ -180,7 +180,7 @@ class ClassificationBase(BaseModel):
             for thres in thresholds:
                 mon_object = get_obj_from_str(mon_target)(**mon_params, threshold=thres)
                 mon_value = mon_object(torch.cat(pr), torch.cat(gt))
-                if metric_value > best_metric:
+                if mon_value > best_metric:
                     best_metric = mon_value
                     best_thres = thres
 

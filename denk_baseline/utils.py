@@ -62,6 +62,13 @@ def preprocess_mask2onehot(image, labels, to_torch=False, img_w=None, img_h=None
         img = torch.from_numpy(img).permute(2, 0, 1)
     return img
 
+def preprocess_single_mask(image, labels, img_w=None, img_h=None, interpolation=cv2.INTER_NEAREST):
+    img = image.copy()
+    if img_w and img_h:
+        img = cv2.resize(img, (img_w, img_h), interpolation=interpolation)
+    img = reindex_mask(img, labels)
+    return torch.from_numpy(img).long()
+
 def reindex_mask(image, labels):
     img = image.copy()
     for index, label in enumerate(labels):
