@@ -1,10 +1,10 @@
 ## DENK BASELINE
   
-Common scripts for fast neural network training for the tasks of semantic segmentation and classification. 
+Common scripts for fast neural network training for classification and segmentation. 
 
 This repo combines approaches of <a href="https://github.com/Lightning-AI/lightning">PytorchLightning</a> with models from <a href="https://github.com/qubvel/segmentation_models.pytorch">Segmentation Models Pytorch</a> and <a href="https://github.com/rwightman/pytorch-image-models">timm</a>.  
 
-Initially trained models and logs are saved in ```./output/<project folder>/<experiment name>``` 
+Trained models and logs are saved in `./outputs/<project>/<experiment>` by default (see `general.save_dir` in configs).
 
 ### Basic usage
 
@@ -19,23 +19,32 @@ cd denk_baseline
 pip install -r requirements.txt
 ```
 
-#### 3. Set path to images and masks
+#### 3. Pick a config and set data paths
 
-In config file (in configs folder) you should set path to images and masks folders.   
-Also you can change come parameters of training.
+Configs live inside each project folder (recommended):
+
+- `projects/*/config*.yaml` for project-specific runs
+
+The root `configs/` directory contains baseline examples and is optional.  
+Update dataset paths (e.g., `images_dir`, `masks_dir`, `csv_path`, `video_folder`) to match your local data layout.
 
 #### 4. Run training
 
-Binary segmentation task:  
 ```python
-python run.py --config "path to config.yaml"
+python run.py --config "path/to/config.yaml"
+```
+
+To run evaluation only:
+
+```python
+python run.py --config "path/to/config.yaml" --test
 ```
 
   
 ##### Watch tensorboard (if available)
 
-```pyhton
-tensorboard --logdir=output/
+```python
+tensorboard --logdir=outputs/
 ```
 
 ## Contacts

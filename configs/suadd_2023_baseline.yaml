@@ -1,0 +1,105 @@
+general:
+  exp_name: suadd_baseline
+  project_name: suadd_2023
+  save_dir: outputs
+  seed: 42
+  batch_size: 24
+  num_workers: 4
+  img_w: 384
+  img_h: 384
+
+lightning_model: denk_baseline.lightning_models.SegmentationMulticlassModel
+
+model:
+  target: segmentation_models_pytorch.Unet
+  params:
+    encoder_name: resnet34
+    encoder_weights: imagenet
+    in_channels: 1
+    classes: 17
+
+criterions:
+  - target: torch.nn.CrossEntropyLoss
+    weight: 1.0
+    name: ce
+
+optimizers:
+  - target: torch.optim.SGD
+    params:
+      lr: 0.005
+      momentum: 0.9
+      weight_decay: 0.0005
+    scheduler:
+      target: torch.optim.lr_scheduler.StepLR
+      params:
+        step_size: 3
+        gamma: 0.1
+
+trainer:
+  target: pytorch_lightning.Trainer
+  params:
+    max_epochs: 10
+    accelerator: gpu
+    devices: 1
+    precision: 16
+
+callbacks:
+  - target: pytorch_lightning.callbacks.ModelCheckpoint
+    params:
+      monitor: total_loss_valid
+      mode: min
+      save_top_k: 3
+  - target: pytorch_lightning.callbacks.EarlyStopping
+    params:
+      monitor: total_loss_valid
+      patience: 3
+      mode: min
+
+loggers:
+  - target: pytorch_lightning.loggers.TensorBoardLogger
+    params:
+      log_graph: true
+  - target: pytorch_lightning.loggers.WandbLogger
+    params:
+      log_model: true
+
+datasets:
+  train:
+    target: projects.suadd_2023.dataset.SUADDDataset
+    params:
+      images_dir: data/suadd_2023/images
+      masks_dir: data/suadd_2023/masks
+      csv_path: data/suadd_2023/train.csv
+      stage: train
+      img_w: ${general.img_w}
+      img_h: ${general.img_h}
+      augs: projects.suadd_2023.augs.TrainAugs
+      mosaic_proba: 0.0
+  valid:
+    target: projects.suadd_2023.dataset.SUADDDataset
+    params:
+      images_dir: data/suadd_2023/images
+      masks_dir: data/suadd_2023/masks
+      csv_path: data/suadd_2023/valid.csv
+      stage: valid
+      img_w: ${general.img_w}
+      img_h: ${general.img_h}
+      mosaic_proba: 0.0
+
+dataloaders:
+  train:
+    target: torch.utils.data.DataLoader
+    params: &dataloader_params
+      shuffle: false
+      batch_size: ${general.batch_size}
+      num_workers: ${general.num_workers}
+      drop_last: false
+      pin_memory: true
+    sampler:
+      target: torch.utils.data.RandomSampler
+  valid:
+    target: torch.utils.data.DataLoader
+    params:
+      <<: *dataloader_params
+    sampler:
+      target: torch.utils.data.SequentialSampler
