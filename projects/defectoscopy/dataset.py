@@ -62,7 +62,7 @@ class DefectoscopyClassificationDataset(Dataset):
             bg = self.transforms(bg)
         
         return {
-            "image": bg, 
+            "inputs": bg,
             "label": 1 - label, 
             "oh_label": torch.tensor([1, 0], dtype=torch.float32) if self.is_multiclass else torch.tensor([0, 1], dtype=torch.float32),
         }

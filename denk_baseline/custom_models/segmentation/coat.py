@@ -56,8 +56,8 @@ class CoatNet(nn.Module):
         ])
     
     def forward(self, batch):
-        b, c, h, w = batch['image'].shape
-        x = batch['image']
+        x = batch.get('inputs', batch.get('image'))
+        b, c, h, w = x.shape
         enc_x = self.enc(x)
         conv = self.conv(x)
         

@@ -40,9 +40,9 @@ class SegmentationMulticlassDataset(Dataset):
         sg_mask = preprocess_single_mask(mask, self.labels, img_w=self.img_w, img_h=self.img_h)
 
         return {
-            'image': image, 
-            'oh_mask': oh_mask, 
-            'sg_mask': sg_mask,
+            'inputs': image,
+            'targets': sg_mask,
+            'targets_aux': oh_mask,
         }
 
 
@@ -76,8 +76,8 @@ class SegmentationBinaryDataset(Dataset):
         mask = preprocess_single_mask(mask, self.labels, img_w=self.img_w, img_h=self.img_h)
         
         return {
-            'image': image, 
-            'mask': mask.unsqueeze(0),
+            'inputs': image,
+            'targets': mask.unsqueeze(0),
         }
 
 class ClassificationBinaryDataset(Dataset):
@@ -105,8 +105,8 @@ class ClassificationBinaryDataset(Dataset):
         image = preprocess_image(image, img_w=self.img_w, img_h=self.img_h)
         label = self.df.iloc[index]['num_label']
         return {
-            'image': image, 
-            'label': label,
+            'inputs': image,
+            'targets': label,
         }
 
 
@@ -136,9 +136,9 @@ class ClassificationMulticlassDataset(Dataset):
         label = self.df.iloc[index]['num_label']
 
         return {
-            'image': image, 
-            'label': label,
-            'oh_label': np.array([0, 1]) if label else np.array([1, 0]) 
+            'inputs': image,
+            'targets': label,
+            'targets_aux': np.array([0, 1]) if label else np.array([1, 0]),
         }
 
 
