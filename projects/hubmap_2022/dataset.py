@@ -120,6 +120,6 @@ class HubmapDataset(Dataset):
         mask = preprocess_single_mask(mask, self.labels, img_w=self.img_w, img_h=self.img_h)
 
         return {
-            'image': image, 
+            'inputs': image,
             'mask': mask.unsqueeze(0).float(),
         }

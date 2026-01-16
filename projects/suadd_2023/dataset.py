@@ -95,7 +95,7 @@ class SUADDDataset(Dataset):
         oh_mask = preprocess_mask2onehot(mask, self.labels, to_torch=True, img_w=self.img_w, img_h=self.img_h)
         
         return {
-            'image': image, 
+            'inputs': image,
             'oh_mask': oh_mask.float(),
             'sg_mask': sg_mask.long(),
         }

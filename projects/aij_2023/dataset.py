@@ -315,7 +315,7 @@ class TrainVideoDataset(Dataset):
         
         oh_label = torch.zeros(1001)
         oh_label[label] = 1
-        sample = dict(image=pixel_values, label=label, oh_label=oh_label)
+        sample = dict(inputs=pixel_values, label=label, oh_label=oh_label)
         return sample
 
     def __getitem__(self, index):
@@ -328,7 +328,7 @@ class TrainVideoDataset(Dataset):
             mixup_sample = self.get_item(mixup_index)
 
             mixup_coef = np.random.randint(50, 400) / 1000.0
-            sample['image'] = mixup_sample['image'] * mixup_coef + sample['image'] * (1.0 - mixup_coef)
+            sample['inputs'] = mixup_sample['inputs'] * mixup_coef + sample['inputs'] * (1.0 - mixup_coef)
             sample['oh_label'] = mixup_sample['oh_label'] * mixup_coef + sample['oh_label'] * (1.0 - mixup_coef)
             mixup_applied = True
 
@@ -345,7 +345,7 @@ class TrainVideoDataset(Dataset):
             
             original_coefs = np.linspace(start_cross, end_cross, self.sample_n_frames, dtype=np.float32)[None, :, None, None]
             reversed_coefs = (1.0 - original_coefs)
-            sample['image'] = sample['image'] * original_coefs + cross_sample['image'] * reversed_coefs
+            sample['inputs'] = sample['inputs'] * original_coefs + cross_sample['inputs'] * reversed_coefs
 
         return sample
     
@@ -448,7 +448,7 @@ class ValidVideoDataset(Dataset):
 
         oh_label = torch.zeros(1001)
         oh_label[label] = 1
-        sample = dict(image=pixel_values, label=label, oh_label=oh_label)
+        sample = dict(inputs=pixel_values, label=label, oh_label=oh_label)
         return sample
     
     

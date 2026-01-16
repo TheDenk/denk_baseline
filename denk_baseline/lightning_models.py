@@ -95,13 +95,15 @@ class SegmentationMulticlassModel(BaseModel):
         self.use_bg = {x['name']: x.get('use_bg', True) for x in config['metrics']}
         
     def _common_step(self, batch, batch_idx, stage):
-        gt_img, sg_mask, oh_mask = batch['image'], batch['sg_mask'], batch['oh_mask']
-        pr_mask = self.model(gt_img.contiguous())
+        inputs = batch.get('inputs', batch.get('image'))
+        targets = batch.get('targets', batch.get('sg_mask'))
+        targets_aux = batch.get('targets_aux', batch.get('oh_mask'))
+        preds = self.model(inputs.contiguous())
         # print(gt_img.shape, pr_mask.shape, oh_mask.shape, sg_mask.shape)
         
         loss = 0
         for c_name in self.criterions.keys():
-            c_loss = self.criterions[c_name](pr_mask, sg_mask) * self.crit_weights[c_name]
+            c_loss = self.criterions[c_name](preds, targets) * self.crit_weights[c_name]
             self.log(f"{c_name}_loss_{stage}", c_loss, on_step=False, on_epoch=True, prog_bar=True)
             loss += c_loss
         self.log(f"total_loss_{stage}", loss, on_step=False, on_epoch=True, prog_bar=True)
@@ -109,7 +111,7 @@ class SegmentationMulticlassModel(BaseModel):
         for m_name in self.metrics.keys():
             metric_info = f"{m_name}_{stage}"
             index = 0 if self.use_bg[m_name] else 1
-            metric_value = self.metrics[m_name](pr_mask[:, index:, :, :], oh_mask[:, index:, :, :])
+            metric_value = self.metrics[m_name](preds[:, index:, :, :], targets_aux[:, index:, :, :])
             self.log(metric_info, metric_value, on_step=False, on_epoch=True, prog_bar=True)
 
         return {
@@ -122,19 +124,20 @@ class SegmentationBinaryModel(BaseModel):
         super().__init__(config)
 
     def _common_step(self, batch, batch_idx, stage):
-        gt_img, gt_mask = batch['image'], batch['mask'].float()
-        pr_mask = self.model(gt_img.contiguous()).float()
+        inputs = batch.get('inputs', batch.get('image'))
+        targets = batch.get('targets', batch.get('mask')).float()
+        preds = self.model(inputs.contiguous()).float()
         
         loss = 0
         for c_name in self.criterions.keys():
-            c_loss = self.criterions[c_name](pr_mask, gt_mask) * self.crit_weights[c_name]
+            c_loss = self.criterions[c_name](preds, targets) * self.crit_weights[c_name]
             self.log(f"{c_name}_loss_{stage}", c_loss, on_epoch=True, prog_bar=True)
             loss += c_loss
         self.log(f"total_loss_{stage}", loss, on_step=False, on_epoch=True, prog_bar=True)
 
         for m_name in self.metrics.keys():
             metric_info = f"{m_name}_{stage}"
-            metric_value = self.metrics[m_name](pr_mask, gt_mask)
+            metric_value = self.metrics[m_name](preds, targets)
             self.log(metric_info, metric_value, on_step=False, on_epoch=True, prog_bar=True)              
         return {
             'loss': loss,
@@ -204,18 +207,19 @@ class ClassificationBase(BaseModel):
 class ClassificationBinaryModel(ClassificationBase):
     def _common_step(self, batch, batch_idx, stage):
         with torch.autograd.set_detect_anomaly(True):
-            gt_img, gt_label = batch['image'], batch['label'].float().unsqueeze(1)
-            pr_label = self.model(gt_img.contiguous()).float()
+            inputs = batch.get('inputs', batch.get('image'))
+            targets = batch.get('targets', batch.get('label')).float().unsqueeze(1)
+            preds = self.model(inputs.contiguous()).float()
 
             loss = 0
             for c_name in self.criterions.keys():
-                c_loss = self.criterions[c_name](pr_label, gt_label) * self.crit_weights[c_name]
+                c_loss = self.criterions[c_name](preds, targets) * self.crit_weights[c_name]
                 self.log(f'{c_name}_loss_{stage}', c_loss, on_epoch=True, prog_bar=True)
                 loss += c_loss
             self.log(f'total_loss_{stage}', loss, on_step=False, on_epoch=True, prog_bar=True)
             
-            self.metric_values[stage]['pr'].append(pr_label.cpu().detach().squeeze())
-            self.metric_values[stage]['gt'].append(gt_label.cpu().detach().squeeze().long())
+            self.metric_values[stage]['pr'].append(preds.cpu().detach().squeeze())
+            self.metric_values[stage]['gt'].append(targets.cpu().detach().squeeze().long())
 
         return {
             'loss': loss,
@@ -227,18 +231,20 @@ class ClassificationMulticlassModel(ClassificationBase):
         super().__init__(config)
 
     def _common_step(self, batch, batch_idx, stage):
-        gt_img, gt_label, oh_label = batch['image'], batch['label'].long(), batch['oh_label']
-        pr_label = self.model(gt_img.contiguous()).float()
+        inputs = batch.get('inputs', batch.get('image'))
+        targets = batch.get('targets', batch.get('label')).long()
+        targets_aux = batch.get('targets_aux', batch.get('oh_label'))
+        preds = self.model(inputs.contiguous()).float()
         
         loss = 0
         for c_name in self.criterions.keys():
-            c_loss = self.criterions[c_name](pr_label, oh_label) * self.crit_weights[c_name]
+            c_loss = self.criterions[c_name](preds, targets_aux) * self.crit_weights[c_name]
             self.log(f"{c_name}_loss_{stage}", c_loss, on_epoch=True, prog_bar=True)
             loss += c_loss
         self.log(f"total_loss_{stage}", loss, on_step=False, on_epoch=True, prog_bar=True)
         
-        self.metric_values[stage]['pr'].append(pr_label.cpu().detach().argmax(dim=1))
-        self.metric_values[stage]['gt'].append(oh_label.cpu().argmax(dim=1))   
+        self.metric_values[stage]['pr'].append(preds.cpu().detach().argmax(dim=1))
+        self.metric_values[stage]['gt'].append(targets_aux.cpu().argmax(dim=1))
 
         return {
             'loss': loss,
@@ -250,14 +256,16 @@ class ClassificationMulticlassWithModelLoss(ClassificationBase):
         super().__init__(config)
 
     def _common_step(self, batch, batch_idx, stage):
-        gt_img, gt_label, oh_label = batch['image'], batch['label'].long(), batch['oh_label']
-        loss, pr_label = self.model(gt_img.contiguous(), labels=oh_label)
+        inputs = batch.get('inputs', batch.get('image'))
+        targets = batch.get('targets', batch.get('label')).long()
+        targets_aux = batch.get('targets_aux', batch.get('oh_label'))
+        loss, preds = self.model(inputs.contiguous(), labels=targets_aux)
         self.log(f"total_loss_{stage}", loss, on_step=False, on_epoch=True, prog_bar=True)
         # print(pr_label.shape)
         # print(pr_label.shape, oh_label.shape)
-        oh_label = oh_label.mean(1)
-        self.metric_values[stage]['pr'].append(pr_label.cpu().detach().argmax(dim=1))
-        self.metric_values[stage]['gt'].append(oh_label.cpu().argmax(dim=1))   
+        targets_aux = targets_aux.mean(1)
+        self.metric_values[stage]['pr'].append(preds.cpu().detach().argmax(dim=1))
+        self.metric_values[stage]['gt'].append(targets_aux.cpu().argmax(dim=1))
 
         return {
             'loss': loss,
@@ -268,25 +276,27 @@ class ClassificationMulticlassDistillationModel(ClassificationBase):
         super().__init__(config)
 
     def _common_step(self, batch, batch_idx, stage):
-        gt_img, gt_label, oh_label = batch['image'], batch['label'].long(), batch['oh_label']
-        pr_label = self.model(gt_img.contiguous())
+        inputs = batch.get('inputs', batch.get('image'))
+        targets = batch.get('targets', batch.get('label')).long()
+        targets_aux = batch.get('targets_aux', batch.get('oh_label'))
+        preds = self.model(inputs.contiguous())
         # pr_label = [x.float() for x in pr_label]
         
         loss = 0
         for c_name in self.criterions.keys():
-            c_loss = self.criterions[c_name](gt_img, pr_label, gt_label) * self.crit_weights[c_name]
+            c_loss = self.criterions[c_name](inputs, preds, targets) * self.crit_weights[c_name]
             self.log(f"{c_name}_loss_{stage}", c_loss, on_epoch=True, prog_bar=True, )
             loss += c_loss
         self.log(f"total_loss_{stage}", loss, on_step=False, on_epoch=True, prog_bar=True)
         
         if hasattr(self.model, 'with_two_heads') and self.model.with_two_heads:
-            pr_label = [x.cpu().detach() for x in pr_label]
-            pr_label = ((pr_label[0] + pr_label[1]) / 2).argmax(dim=1)
+            preds = [x.cpu().detach() for x in preds]
+            preds = ((preds[0] + preds[1]) / 2).argmax(dim=1)
         else:
-            pr_label = pr_label.cpu().detach().argmax(dim=1)
+            preds = preds.cpu().detach().argmax(dim=1)
 
-        self.metric_values[stage]['pr'].append(pr_label)
-        self.metric_values[stage]['gt'].append(oh_label.cpu().argmax(dim=1))   
+        self.metric_values[stage]['pr'].append(preds)
+        self.metric_values[stage]['gt'].append(targets_aux.cpu().argmax(dim=1))
     
         return {
             'loss': loss,

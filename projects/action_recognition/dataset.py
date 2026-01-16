@@ -472,7 +472,7 @@ class ActionsDataset(Dataset):
 
         oh_label = torch.zeros(7)
         oh_label[label] = 1
-        sample = dict(image=pixel_values, label=label, oh_label=oh_label)
+        sample = dict(inputs=pixel_values, label=label, oh_label=oh_label)
         return sample
         
     def __getitem__(self, idx):
@@ -486,7 +486,7 @@ class ActionsDataset(Dataset):
             mixup_item = self.get_augmented_item(mixup_index)
 
             mixup_alpha = np.random.randint(50, 400) / 1000.0
-            item['image'] = mixup_item['image'] * mixup_alpha + item['image'] * (1.0 - mixup_alpha)
+            item['inputs'] = mixup_item['inputs'] * mixup_alpha + item['inputs'] * (1.0 - mixup_alpha)
             item['oh_label'] = mixup_item['oh_label'] * mixup_alpha + item['oh_label'] * (1.0 - mixup_alpha)
 
         if (not mixup_done) and (np.random.random() < self.augs_proba['cutmix']):
@@ -495,7 +495,7 @@ class ActionsDataset(Dataset):
             cutmix_item = self.get_augmented_item(cutmix_index)
             
             cutmix_coefs, cutmix_alpha = calculate_cross_coefs(self.sample_n_frames)
-            item['image'] = item['image'] * cutmix_coefs + cutmix_item['image'] * (1.0 - cutmix_coefs)
+            item['inputs'] = item['inputs'] * cutmix_coefs + cutmix_item['inputs'] * (1.0 - cutmix_coefs)
             item['oh_label'] = item['oh_label'] * cutmix_alpha + cutmix_item['oh_label'] * (1.0 - cutmix_alpha)
             
         return item
@@ -574,7 +574,7 @@ class ActionsMultiheadDataset(Dataset):
 
         oh_label = torch.zeros(self.sample_n_frames, 7)
         oh_label[:, label] = 1
-        sample = dict(image=pixel_values, label=label, oh_label=oh_label)
+        sample = dict(inputs=pixel_values, label=label, oh_label=oh_label)
         return sample
         
     def __getitem__(self, idx):
@@ -588,7 +588,7 @@ class ActionsMultiheadDataset(Dataset):
             mixup_item = self.get_augmented_item(mixup_index)
 
             mixup_alpha = np.random.randint(50, 400) / 1000.0
-            item['image'] = mixup_item['image'] * mixup_alpha + item['image'] * (1.0 - mixup_alpha)
+            item['inputs'] = mixup_item['inputs'] * mixup_alpha + item['inputs'] * (1.0 - mixup_alpha)
             item['oh_label'] = mixup_item['oh_label'] * mixup_alpha + item['oh_label'] * (1.0 - mixup_alpha)
 
         if (not mixup_done) and (np.random.random() < self.augs_proba['cutmix']):
@@ -597,7 +597,7 @@ class ActionsMultiheadDataset(Dataset):
             cutmix_item = self.get_augmented_item(cutmix_index)
             
             cutmix_coefs, cutmix_alpha = calculate_cross_coefs(self.sample_n_frames)
-            item['image'] = item['image'] * cutmix_coefs + cutmix_item['image'] * (1.0 - cutmix_coefs)
+            item['inputs'] = item['inputs'] * cutmix_coefs + cutmix_item['inputs'] * (1.0 - cutmix_coefs)
             # print(cutmix_coefs[:, :, 0, 0])
             item['oh_label'] = item['oh_label'] * cutmix_coefs[:, :, 0, 0] + cutmix_item['oh_label'] * (1.0 - cutmix_coefs[:, :, 0, 0])
             

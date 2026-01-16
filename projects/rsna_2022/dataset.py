@@ -90,7 +90,7 @@ class RSNADataset(Dataset):
         image = preprocess_image(image, img_w=self.img_w, img_h=self.img_h, mean=mean, std=std)
         
         return {
-            'image': image, 
+            'inputs': image,
             'label': label,
             # 'oh_label': torch.tensor([1 - label, 0 + label])
         }
